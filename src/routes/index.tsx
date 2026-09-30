@@ -1,24 +1,119 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useSuspenseQuery } from "@tanstack/react-query";
+import { catalogQueryOptions } from "@/lib/catalog.functions";
+import { ProductCard } from "@/components/dzamp/ProductCard";
+import { ProductModal } from "@/components/dzamp/ProductModal";
+import { useCart } from "@/components/dzamp/cart";
+import type { Product } from "@/lib/dzamp/types";
 
-// No head() here: the home route inherits title/description/og/twitter from
-// __root.tsx, and ships no og:image so serve-time hosting can inject the
-// project's social preview (explicit og:image or latest screenshot).
+const SLIDES = [
+  "/images/carousel/carousel-1.jpg",
+  "/images/carousel/carousel-2.jpg",
+  "/images/carousel/carousel-3.jpg",
+  "/images/carousel/carousel-4.jpg",
+];
+
 export const Route = createFileRoute("/")({
-  component: Index,
+  head: () => ({
+    meta: [
+      { title: "DZAMP — Moda com identidade para todas as idades" },
+      {
+        name: "description",
+        content:
+          "Catálogo DZAMP: camisetas, polos e manga longa com proteção UV. Linhas Infantil, Jovem, Adulto e UV, com pedido direto pelo WhatsApp.",
+      },
+      { property: "og:title", content: "DZAMP — Moda com identidade" },
+      {
+        property: "og:description",
+        content: "Peças premium nas linhas Infantil, Jovem, Adulto e UV. Peça pelo WhatsApp.",
+      },
+    ],
+  }),
+  loader: ({ context }) => context.queryClient.ensureQueryData(catalogQueryOptions),
+  component: HomePage,
 });
 
-// IMPORTANT: Replace this placeholder. See ./README.md for routing conventions.
-function Index() {
+function HomePage() {
+  const { data } = useSuspenseQuery(catalogQueryOptions);
+  const { add } = useCart();
+  const [slide, setSlide] = useState(0);
+  const [selected, setSelected] = useState<Product | null>(null);
+
+  useEffect(() => {
+    const id = window.setInterval(() => setSlide((s) => (s + 1) % SLIDES.length), 4000);
+    return () => window.clearInterval(id);
+  }, []);
+
+  const featured = data.products.slice(0, 4);
+
   return (
-    <div
-      className="flex min-h-screen items-center justify-center"
-      style={{ backgroundColor: "#fcfbf8" }}
-    >
-      <img
-        data-lovable-blank-page-placeholder="REMOVE_THIS"
-        src="https://cdn.gpteng.co/blank-app-v1.svg"
-        alt="Your app will live here!"
-      />
-    </div>
+    <main className="page">
+      <section className="hero">
+        <div className="hero-copy">
+          <span className="hero-eyebrow">Coleção DZAMP</span>
+          <h1>
+            Moda com identidade para <span className="brand-z">todas as idades</span>
+          </h1>
+          <p className="muted">
+            Camisetas, polos e manga longa com proteção UV. Escolha cor, estampa e tamanho — e
+            finalize seu pedido pelo WhatsApp em segundos.
+          </p>
+          <div className="hero-cta">
+            <Link to="/catalogo" className="btn btn-primary">
+              Ver catálogo
+            </Link>
+            <Link to="/contatos" className="btn btn-outline">
+              Falar conosco
+            </Link>
+          </div>
+        </div>
+
+        <div className="hero-carousel-wrap">
+          <div className="hero-carousel">
+            <div className="hc-track" style={{ transform: `translateX(-${slide * 100}%)` }}>
+              {SLIDES.map((src) => (
+                <div className="hc-slide" key={src}>
+                  <img src={src} alt="Peças da coleção DZAMP" />
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="hc-dots">
+            {SLIDES.map((src, i) => (
+              <button
+                key={src}
+                className={`hc-dot ${i === slide ? "hc-dot-active" : ""}`}
+                onClick={() => setSlide(i)}
+                aria-label={`Imagem ${i + 1}`}
+              />
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="section home-featured">
+        <div className="section-head">
+          <h2>Destaques</h2>
+          <Link to="/catalogo" className="see-all">
+            Ver todos →
+          </Link>
+        </div>
+        <div className="grid">
+          {featured.map((p) => (
+            <ProductCard
+              key={p.id}
+              product={p}
+              onDetails={() => setSelected(p)}
+              onAdd={(item) => add(item)}
+            />
+          ))}
+        </div>
+      </section>
+
+      {selected && (
+        <ProductModal product={selected} onClose={() => setSelected(null)} onAdd={(i) => add(i)} />
+      )}
+    </main>
   );
 }

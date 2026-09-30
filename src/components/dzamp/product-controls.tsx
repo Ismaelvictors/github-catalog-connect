@@ -140,7 +140,7 @@ export function SizeSelect({
           onChange={(e) => {
             if (e.target.value) onChange(e.target.value);
           }}
-          className={error ? "select-invalid" : undefined}
+          className={["select-plain", error ? "select-invalid" : ""].filter(Boolean).join(" ") || undefined}
           aria-invalid={error || undefined}
         >
           {!value && (

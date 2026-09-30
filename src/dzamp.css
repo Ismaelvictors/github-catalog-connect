@@ -1614,3 +1614,4 @@ select {
   .footer-inner { grid-template-columns: 1fr; }
   .section-head h1 { font-size: 1.6rem; }
 }
+.section-head p.muted, .hero-copy p.muted { color: #4a5565; }

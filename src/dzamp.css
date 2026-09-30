@@ -6,7 +6,7 @@
   --navy: #17233f;
   --ink: #101418;
   --ink-soft: #3d4652;
-  --muted: #6b7480;
+  --muted: #55606e;
   --line: #e3e7ee;
   --bg: #fbfbf9;
   --white: #ffffff;
@@ -1397,13 +1397,13 @@ select {
 
 .footer-tagline {
   margin: 0;
-  color: #6b7280;
+  color: #55606e;
   font-size: 1.02rem;
 }
 
 .footer-copy {
   margin: 6px 0 0;
-  color: #6b7280;
+  color: #55606e;
   font-size: .8rem;
 }
 
@@ -1524,12 +1524,20 @@ select {
 
   .sacola-btn {
     position: fixed;
-    bottom: 18px;
-    right: 16px;
+    bottom: calc(18px + env(safe-area-inset-bottom, 0px));
+    right: calc(16px + env(safe-area-inset-right, 0px));
     z-index: 60;
     width: 56px;
     height: 56px;
     padding: 0;
+  }
+
+  .footer {
+    padding-bottom: calc(22px + env(safe-area-inset-bottom, 0px) + 64px);
+  }
+
+  .cart-foot {
+    padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
   }
 
   .contact-grid {

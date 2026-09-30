@@ -1663,4 +1663,40 @@ select {
   .footer-inner { grid-template-columns: 1fr; }
   .section-head h1 { font-size: 1.6rem; }
 }
-.section-head p.muted, .hero-copy p.muted { color: #4a5565; font-weight: 700; }
+.section-head p.muted, .hero-copy p.muted { color: #3f4a59; font-weight: 700; }
+
+/* ---- Ajustes finos mobile ---- */
+@media (max-width: 720px) {
+  .filters-panel .chips {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scroll-snap-type: x proximity;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding: 2px 16px 6px;
+    margin: 0 -16px;
+  }
+
+  .filters-panel .chips::-webkit-scrollbar { display: none; }
+
+  .filters-panel .chip {
+    flex: 0 0 auto;
+    scroll-snap-align: start;
+    padding: 10px 18px;
+  }
+
+  .catalog-toolbar { gap: 10px; }
+  .search-input { min-height: 46px; }
+  .filters-toggle { min-height: 46px; }
+
+  .select-wrap select { min-height: 44px; font-size: 1rem; }
+  .card-add { min-height: 46px; }
+}
+
+.select-field label,
+.pm-qty label,
+.pm-note label,
+.pm-sizes label,
+.contact-form label,
+.size-note,
+.empty-state { color: #55606e; }

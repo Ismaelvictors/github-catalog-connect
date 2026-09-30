@@ -119,6 +119,7 @@ export function SizeSelect({
   onChange,
   error,
   note,
+  singleLabel,
   id,
 }: {
   sizes: string[];
@@ -126,6 +127,7 @@ export function SizeSelect({
   onChange: (s: string) => void;
   error?: boolean | undefined;
   note?: string | undefined;
+  singleLabel?: string | undefined;
   id?: string;
 }) {
   return (
@@ -148,7 +150,7 @@ export function SizeSelect({
           )}
           {sizes.map((s) => (
             <option key={s} value={s}>
-              {s}
+              {singleLabel && sizes.length === 1 ? singleLabel : s}
             </option>
           ))}
         </select>

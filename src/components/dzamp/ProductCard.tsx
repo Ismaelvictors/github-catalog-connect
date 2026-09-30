@@ -82,7 +82,8 @@ export function ProductCard({
               setSizeError(false);
             }}
             error={sizeError}
-            note={sizeError ? "Selecione um tamanho." : line.sizesNote}
+            note={sizeError ? "Selecione um tamanho." : undefined}
+            singleLabel={line.sizesSelectLabel}
           />
           <div className="card-buy-row">
             <QtyStepper value={qty} onChange={setQty} small />

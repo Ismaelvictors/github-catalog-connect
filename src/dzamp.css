@@ -1584,7 +1584,7 @@ select {
 
 .card { display: flex; flex-direction: column; overflow: hidden; }
 .card-media { position: relative; border: 0; padding: 0; background: none; cursor: pointer; display: block; width: 100%; }
-.card-selects { display: grid; gap: 12px; margin-top: 12px; }
+.card-selects { display: grid; gap: 12px; margin-top: auto; padding-top: 12px; }
 .select-field { display: grid; gap: 6px; }
 .select-field label { font-size: .78rem; font-weight: 600; color: #6b7480; text-transform: uppercase; letter-spacing: .04em; }
 .select-wrap { position: relative; display: flex; align-items: center; }

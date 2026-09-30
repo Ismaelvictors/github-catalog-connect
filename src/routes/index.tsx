@@ -51,13 +51,12 @@ function HomePage() {
     <main className="page">
       <section className="hero">
         <div className="hero-copy">
-          <span className="hero-eyebrow">Coleção DZAMP</span>
-          <h1>
-            Moda com identidade para <span className="brand-z">todas as idades</span>
-          </h1>
+          <span className="hero-eyebrow">Moda Masculina</span>
+          <h1>Estilo, conforto e elegância</h1>
           <p className="muted">
-            Camisetas, polos e manga longa com proteção UV. Escolha cor, estampa e tamanho — e
-            finalize seu pedido pelo WhatsApp em segundos.
+            Para os pequenos passos e as grandes conquistas.
+            <br />
+            Confira nosso catálogo completo e à pronta entrega.
           </p>
           <div className="hero-cta">
             <Link to="/catalogo" className="btn btn-primary">

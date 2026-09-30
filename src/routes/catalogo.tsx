@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useSuspenseQuery } from "@tanstack/react-query";
+import { Filter } from "lucide-react";
 import { catalogQueryOptions } from "@/lib/catalog.functions";
 import { CategoryChips } from "@/components/dzamp/product-controls";
 import { ProductCard } from "@/components/dzamp/ProductCard";
@@ -33,6 +34,7 @@ function CatalogPage() {
   const { add } = useCart();
   const [category, setCategory] = useState<Category | "all">("all");
   const [search, setSearch] = useState("");
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const [selected, setSelected] = useState<Product | null>(null);
 
   const products = useMemo(() => {
@@ -50,13 +52,9 @@ function CatalogPage() {
       <section className="section">
         <div className="section-head">
           <h1>Catálogo</h1>
-          <p className="muted">
-            Escolha a linha, personalize cor, estampa e tamanho e finalize pelo WhatsApp.
-          </p>
         </div>
 
         <div className="catalog-toolbar">
-          <CategoryChips active={category} onChange={setCategory} />
           <input
             className="search-input"
             type="search"
@@ -65,7 +63,21 @@ function CatalogPage() {
             onChange={(e) => setSearch(e.target.value)}
             aria-label="Buscar produto"
           />
+          <button
+            className={`filters-toggle ${filtersOpen ? "filters-toggle-open" : ""}`}
+            onClick={() => setFiltersOpen((o) => !o)}
+            aria-expanded={filtersOpen}
+          >
+            <Filter size={16} strokeWidth={2.4} aria-hidden="true" />
+            Filtros
+          </button>
         </div>
+
+        {filtersOpen && (
+          <div className="filters-panel">
+            <CategoryChips active={category} onChange={setCategory} />
+          </div>
+        )}
 
         {products.length === 0 ? (
           <p className="empty-state">Nenhum produto encontrado para esta busca.</p>

@@ -60,10 +60,7 @@ function HomePage() {
           </p>
           <div className="hero-cta">
             <Link to="/catalogo" className="btn btn-primary">
-              Ver catálogo
-            </Link>
-            <Link to="/contatos" className="btn btn-outline">
-              Falar conosco
+              Ver catálogo completo
             </Link>
           </div>
         </div>
@@ -77,16 +74,16 @@ function HomePage() {
                 </div>
               ))}
             </div>
-          </div>
-          <div className="hc-dots">
-            {SLIDES.map((src, i) => (
-              <button
-                key={src}
-                className={`hc-dot ${i === slide ? "hc-dot-active" : ""}`}
-                onClick={() => setSlide(i)}
-                aria-label={`Imagem ${i + 1}`}
-              />
-            ))}
+            <div className="hc-dots">
+              {SLIDES.map((src, i) => (
+                <button
+                  key={src}
+                  className={`hc-dot ${i === slide ? "hc-dot-active" : ""}`}
+                  onClick={() => setSlide(i)}
+                  aria-label={`Imagem ${i + 1}`}
+                />
+              ))}
+            </div>
           </div>
         </div>
       </section>

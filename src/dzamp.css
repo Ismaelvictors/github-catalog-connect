@@ -415,7 +415,6 @@ select {
 /* ---------- Hero ---------- */
 .hero {
   padding: 8px 0 0;
-  max-width: 680px;
 }
 
 .hero-eyebrow {

@@ -1605,6 +1605,7 @@ select {
 
 .size-block { display: grid; gap: 6px; }
 .size-block-error .size-pill { border-color: rgba(200,35,42,.45); }
+.select-wrap select.select-invalid { border-color: rgba(200,35,42,.45); }
 .size-note { margin: 0; font-size: .75rem; color: #6b7480; }
 
 .card-buy-row { display: flex; align-items: center; gap: 10px; }

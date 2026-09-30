@@ -2,7 +2,7 @@ import { useState } from "react";
 import { CATEGORY_LABELS, lineFor, sizesFor } from "@/lib/dzamp/lines";
 import { formatBRL } from "@/lib/dzamp/format";
 import type { CartItem, Product } from "@/lib/dzamp/types";
-import { ColorSelect, EstampaSelect, QtyStepper, SizePills } from "./product-controls";
+import { ColorSelect, EstampaSelect, QtyStepper, SizeSelect } from "./product-controls";
 
 export function ProductCard({
   product,
@@ -73,7 +73,8 @@ export function ProductCard({
               onChange={setEstampa}
             />
           )}
-          <SizePills
+          <SizeSelect
+            id={`card-size-${product.id}`}
             sizes={sizes}
             value={size}
             onChange={(s) => {

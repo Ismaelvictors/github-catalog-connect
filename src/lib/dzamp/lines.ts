@@ -34,7 +34,7 @@ export const LINE_CONFIG: Record<Category, LineConfig> = {
     label: "Linha Infantil",
     sizes: ["PP"],
     sizesNote: "Tamanho único (veste 2, 3 e 4 anos)",
-    sizesSelectLabel: "Tamanho único (2 a 4 anos)",
+    sizesSelectLabel: "Tamanho único (2-4 anos)",
     colors: COLORS,
     estampas: ESTAMPAS,
     hasEstampa: true,

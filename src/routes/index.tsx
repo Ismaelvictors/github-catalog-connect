@@ -90,7 +90,7 @@ function HomePage() {
 
       <section className="section home-featured">
         <div className="section-head">
-          <h2>Destaques</h2>
+          <h2>Destaques DZAMP</h2>
           <Link to="/catalogo" className="see-all">
             Ver todos →
           </Link>

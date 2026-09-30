@@ -265,9 +265,6 @@ select {
 /* ---------- Home ---------- */
 .hero-cta {
   margin-top: 22px;
-  padding: 14px 28px;
-  font-size: 1rem;
-  border-radius: 12px;
 }
 
 .home-featured {
@@ -285,7 +282,9 @@ select {
 .section-head h2 {
   margin: 0;
   font-size: 1.7rem;
+  font-weight: 800;
   letter-spacing: -0.01em;
+  color: var(--ink);
 }
 
 .see-all {
@@ -1613,4 +1612,4 @@ select {
   .footer-inner { grid-template-columns: 1fr; }
   .section-head h1 { font-size: 1.6rem; }
 }
-.section-head p.muted, .hero-copy p.muted { color: #4a5565; }
+.section-head p.muted, .hero-copy p.muted { color: #4a5565; font-weight: 700; }

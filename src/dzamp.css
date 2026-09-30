@@ -6,7 +6,7 @@
   --navy: #17233f;
   --ink: #101418;
   --ink-soft: #3d4652;
-  --muted: #6b7480;
+  --muted: #55606e;
   --line: #e3e7ee;
   --bg: #fbfbf9;
   --white: #ffffff;
@@ -1397,13 +1397,13 @@ select {
 
 .footer-tagline {
   margin: 0;
-  color: #6b7280;
+  color: #55606e;
   font-size: 1.02rem;
 }
 
 .footer-copy {
   margin: 6px 0 0;
-  color: #6b7280;
+  color: #55606e;
   font-size: .8rem;
 }
 
@@ -1524,12 +1524,20 @@ select {
 
   .sacola-btn {
     position: fixed;
-    bottom: 18px;
-    right: 16px;
+    bottom: calc(18px + env(safe-area-inset-bottom, 0px));
+    right: calc(16px + env(safe-area-inset-right, 0px));
     z-index: 60;
     width: 56px;
     height: 56px;
     padding: 0;
+  }
+
+  .footer {
+    padding-bottom: calc(22px + env(safe-area-inset-bottom, 0px) + 64px);
+  }
+
+  .cart-foot {
+    padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
   }
 
   .contact-grid {
@@ -1655,4 +1663,40 @@ select {
   .footer-inner { grid-template-columns: 1fr; }
   .section-head h1 { font-size: 1.6rem; }
 }
-.section-head p.muted, .hero-copy p.muted { color: #4a5565; font-weight: 700; }
+.section-head p.muted, .hero-copy p.muted { color: #3f4a59; font-weight: 700; }
+
+/* ---- Ajustes finos mobile ---- */
+@media (max-width: 720px) {
+  .filters-panel .chips {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scroll-snap-type: x proximity;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding: 2px 16px 6px;
+    margin: 0 -16px;
+  }
+
+  .filters-panel .chips::-webkit-scrollbar { display: none; }
+
+  .filters-panel .chip {
+    flex: 0 0 auto;
+    scroll-snap-align: start;
+    padding: 10px 18px;
+  }
+
+  .catalog-toolbar { gap: 10px; }
+  .search-input { min-height: 46px; }
+  .filters-toggle { min-height: 46px; }
+
+  .select-wrap select { min-height: 44px; font-size: 1rem; }
+  .card-add { min-height: 46px; }
+}
+
+.select-field label,
+.pm-qty label,
+.pm-note label,
+.pm-sizes label,
+.contact-form label,
+.size-note,
+.empty-state { color: #55606e; }

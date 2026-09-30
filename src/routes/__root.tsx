@@ -10,6 +10,10 @@ import {
 import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
+import { CartProvider } from "@/components/dzamp/cart";
+import { CartDrawer } from "@/components/dzamp/CartDrawer";
+import { Header } from "@/components/dzamp/Header";
+import { Footer } from "@/components/dzamp/Footer";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 
 function NotFoundComponent() {
@@ -116,8 +120,13 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
-      <Outlet />
+      <CartProvider>
+        <Header />
+        {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
+        <Outlet />
+        <Footer />
+        <CartDrawer />
+      </CartProvider>
     </QueryClientProvider>
   );
 }

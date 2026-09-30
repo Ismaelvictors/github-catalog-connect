@@ -113,6 +113,51 @@ export function SizePills({
   );
 }
 
+export function SizeSelect({
+  sizes,
+  value,
+  onChange,
+  error,
+  note,
+  id,
+}: {
+  sizes: string[];
+  value: string | null;
+  onChange: (s: string) => void;
+  error?: boolean | undefined;
+  note?: string | undefined;
+  id?: string;
+}) {
+  return (
+    <div className="select-field">
+      <label htmlFor={id}>Tamanho</label>
+      <div className="select-wrap">
+        <select
+          id={id}
+          value={value ?? ""}
+          onChange={(e) => {
+            if (e.target.value) onChange(e.target.value);
+          }}
+          className={error ? "select-invalid" : undefined}
+          aria-invalid={error || undefined}
+        >
+          {!value && (
+            <option value="" disabled>
+              Selecione
+            </option>
+          )}
+          {sizes.map((s) => (
+            <option key={s} value={s}>
+              {s}
+            </option>
+          ))}
+        </select>
+      </div>
+      {note && <p className="size-note">{note}</p>}
+    </div>
+  );
+}
+
 export function QtyStepper({
   value,
   onChange,

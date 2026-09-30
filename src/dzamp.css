@@ -1581,7 +1581,18 @@ select {
 .select-field { display: grid; gap: 6px; }
 .select-field label { font-size: .78rem; font-weight: 600; color: #6b7480; text-transform: uppercase; letter-spacing: .04em; }
 .select-wrap { position: relative; display: flex; align-items: center; }
-.select-wrap select { width: 100%; padding: 9px 12px; border-radius: 10px; border: 1px solid rgba(23,35,63,.14); background: #fff; font-size: .9rem; appearance: none; }
+.select-wrap::after {
+  content: "";
+  position: absolute;
+  right: 12px;
+  width: 8px;
+  height: 8px;
+  border-right: 2px solid #6b7480;
+  border-bottom: 2px solid #6b7480;
+  transform: rotate(45deg) translateY(-2px);
+  pointer-events: none;
+}
+.select-wrap select { width: 100%; padding: 9px 32px 9px 12px; border-radius: 10px; border: 1px solid rgba(23,35,63,.14); background: #fff; font-size: .9rem; appearance: none; }
 .select-wrap select:focus { outline: none; border-color: #c8232a; }
 .select-dot { position: absolute; right: 34px; width: 14px; height: 14px; border-radius: 50%; border: 1px solid rgba(23,35,63,.2); pointer-events: none; }
 

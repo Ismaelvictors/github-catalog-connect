@@ -91,8 +91,8 @@ export function SizePills({
   sizes: string[];
   value: string | null;
   onChange: (s: string) => void;
-  error?: boolean;
-  note?: string;
+  error?: boolean | undefined;
+  note?: string | undefined;
 }) {
   return (
     <div className={`size-block ${error ? "size-block-error" : ""}`}>

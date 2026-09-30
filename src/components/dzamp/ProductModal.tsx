@@ -15,9 +15,9 @@ export function ProductModal({
 }) {
   const line = lineFor(product.category);
   const [imageIndex, setImageIndex] = useState(0);
-  const [color, setColor] = useState(line.colors[0].name);
+  const [color, setColor] = useState(line.colors[0]?.name ?? "");
   const [estampa, setEstampa] = useState(line.estampas[0] ?? "");
-  const [size, setSize] = useState<string | null>(line.sizes.length === 1 ? line.sizes[0] : null);
+  const [size, setSize] = useState<string | null>(line.sizes.length === 1 ? (line.sizes[0] ?? null) : null);
   const [qty, setQty] = useState(1);
   const [note, setNote] = useState("");
   const [sizeError, setSizeError] = useState(false);

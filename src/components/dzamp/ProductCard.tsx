@@ -14,9 +14,9 @@ export function ProductCard({
   onAdd: (item: Omit<CartItem, "key">) => void;
 }) {
   const line = lineFor(product.category);
-  const [color, setColor] = useState(line.colors[0].name);
+  const [color, setColor] = useState(line.colors[0]?.name ?? "");
   const [estampa, setEstampa] = useState(line.estampas[0] ?? "");
-  const [size, setSize] = useState<string | null>(line.sizes.length === 1 ? line.sizes[0] : null);
+  const [size, setSize] = useState<string | null>(line.sizes.length === 1 ? (line.sizes[0] ?? null) : null);
   const [qty, setQty] = useState(1);
   const [sizeError, setSizeError] = useState(false);
   const sizes = sizesFor(product.category);
@@ -37,7 +37,7 @@ export function ProductCard({
       qty,
       image: product.images[0] ?? "",
     });
-    setSize(line.sizes.length === 1 ? line.sizes[0] : null);
+    setSize(line.sizes.length === 1 ? (line.sizes[0] ?? null) : null);
     setQty(1);
     setSizeError(false);
   };

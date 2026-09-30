@@ -1592,9 +1592,9 @@ select {
   transform: rotate(45deg) translateY(-2px);
   pointer-events: none;
 }
-.select-wrap select { width: 100%; padding: 9px 32px 9px 12px; border-radius: 10px; border: 1px solid rgba(23,35,63,.14); background: #fff; font-size: .9rem; appearance: none; }
+.select-wrap select { width: 100%; padding: 9px 32px 9px 36px; border-radius: 10px; border: 1px solid rgba(23,35,63,.14); background: #fff; font-size: .9rem; appearance: none; }
 .select-wrap select:focus { outline: none; border-color: #c8232a; }
-.select-dot { position: absolute; right: 34px; width: 14px; height: 14px; border-radius: 50%; border: 1px solid rgba(23,35,63,.2); pointer-events: none; }
+.select-dot { position: absolute; left: 14px; width: 14px; height: 14px; border-radius: 50%; border: 1px solid rgba(23,35,63,.2); pointer-events: none; }
 
 .size-block { display: grid; gap: 6px; }
 .size-block-error .size-pill { border-color: rgba(200,35,42,.45); }

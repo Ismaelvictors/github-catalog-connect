@@ -1,37 +1,55 @@
 import { useEffect, useState } from "react";
-import { CATEGORY_LABELS, lineFor, sizesFor } from "@/lib/dzamp/lines";
+import { CATEGORY_LABELS, lineFor } from "@/lib/dzamp/lines";
 import { formatBRL } from "@/lib/dzamp/format";
-import type { CartItem, Product } from "@/lib/dzamp/types";
-import { ColorSelect, EstampaSelect, QtyStepper, SizePills } from "./product-controls";
+import type { CartItem, Product, StoreSettings } from "@/lib/dzamp/types";
+import {
+  firstAvailableIfSingle,
+  isSoldOut,
+  QtyStepper,
+  SizePills,
+  WholesaleHint,
+} from "./product-controls";
 
 export function ProductModal({
   product,
+  settings,
   onClose,
   onAdd,
 }: {
   product: Product;
+  settings: StoreSettings;
   onClose: () => void;
   onAdd: (item: Omit<CartItem, "key">) => void;
 }) {
   const line = lineFor(product.category);
+  const soldOut = isSoldOut(product.stock);
   const [imageIndex, setImageIndex] = useState(0);
-  const [color, setColor] = useState(line.colors[0]?.name ?? "");
-  const [estampa, setEstampa] = useState(line.estampas[0] ?? "");
-  const [size, setSize] = useState<string | null>(line.sizes.length === 1 ? (line.sizes[0] ?? null) : null);
+  const [zoomed, setZoomed] = useState(false);
+  const [size, setSize] = useState<string | null>(() => firstAvailableIfSingle(product.stock));
   const [qty, setQty] = useState(1);
-  const [note, setNote] = useState("");
   const [sizeError, setSizeError] = useState(false);
-  const sizes = sizesFor(product.category);
+
+  const maxQty = size
+    ? Math.max(1, product.stock.find((s) => s.size === size)?.quantity ?? 1)
+    : 99;
+  const savings =
+    product.wholesalePrice > 0 && product.wholesalePrice < product.price
+      ? product.price - product.wholesalePrice
+      : 0;
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") {
+        if (zoomed) setZoomed(false);
+        else onClose();
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
+  }, [onClose, zoomed]);
 
   const handleAdd = () => {
+    if (soldOut) return;
     if (!size) {
       setSizeError(true);
       return;
@@ -40,11 +58,10 @@ export function ProductModal({
       productId: product.id,
       title: product.title,
       price: product.price,
+      wholesalePrice: product.wholesalePrice,
+      category: product.category,
       size,
-      color,
-      estampa: line.hasEstampa ? estampa : "",
-      note: note.trim(),
-      qty,
+      qty: Math.min(qty, maxQty),
       image: product.images[0] ?? "",
     });
     onClose();
@@ -63,29 +80,15 @@ export function ProductModal({
           ✕
         </button>
         <div className="pm-gallery">
-          <div className="pm-main">
+          <button
+            type="button"
+            className="pm-main pm-zoomable"
+            onClick={() => setZoomed(true)}
+            aria-label="Ampliar foto"
+          >
             <img src={product.images[imageIndex] ?? ""} alt={product.title} />
-            {product.images.length > 1 && (
-              <>
-                <button
-                  className="pm-arrow pm-prev"
-                  onClick={() =>
-                    setImageIndex((imageIndex - 1 + product.images.length) % product.images.length)
-                  }
-                  aria-label="Imagem anterior"
-                >
-                  ‹
-                </button>
-                <button
-                  className="pm-arrow pm-next"
-                  onClick={() => setImageIndex((imageIndex + 1) % product.images.length)}
-                  aria-label="Próxima imagem"
-                >
-                  ›
-                </button>
-              </>
-            )}
-          </div>
+            {soldOut && <span className="soldout-seal">Esgotado</span>}
+          </button>
           {product.images.length > 1 && (
             <div className="pm-thumbs">
               {product.images.map((img, idx) => (
@@ -108,58 +111,61 @@ export function ProductModal({
           </span>
           <h2>{product.title}</h2>
           <p className="pm-price">{formatBRL(product.price)}</p>
-          {product.description && <p className="pm-desc">{product.description}</p>}
-
-          <div className="pm-options">
-            <ColorSelect id="pm-color" value={color} colors={line.colors} onChange={setColor} />
-            {line.hasEstampa && (
-              <EstampaSelect
-                id="pm-estampa"
-                value={estampa}
-                estampas={line.estampas}
-                onChange={setEstampa}
-              />
-            )}
-          </div>
+          {savings > 0 && (
+            <p className="pm-wholesale">
+              Atacado <strong>{formatBRL(product.wholesalePrice)}</strong>
+              <span className="muted"> · economize {formatBRL(savings)} por peça</span>
+            </p>
+          )}
+          <WholesaleHint product={product} settings={settings} />
+          {product.description && (
+            <p className="pm-desc pm-desc-rich">{product.description}</p>
+          )}
 
           <div className="pm-sizes">
             <label>
               Tamanho <span className="required">*</span>
             </label>
             <SizePills
-              sizes={sizes}
+              stock={product.stock}
               value={size}
               onChange={(s) => {
                 setSize(s);
                 setSizeError(false);
+                setQty(1);
               }}
               error={sizeError}
-              note={line.sizesNote}
             />
+            {line.sizesNote && <p className="size-note">{line.sizesNote}</p>}
             {sizeError && <p className="field-error">Selecione um tamanho para continuar.</p>}
           </div>
 
           <div className="pm-qty">
             <label>Quantidade</label>
-            <QtyStepper value={qty} onChange={setQty} />
+            <QtyStepper value={qty} onChange={setQty} max={maxQty} />
           </div>
 
-          <div className="pm-note">
-            <label htmlFor="pm-note-input">Observação (opcional)</label>
-            <textarea
-              id="pm-note-input"
-              rows={2}
-              placeholder="Ex.: preferência de cor, detalhes de entrega..."
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-            />
-          </div>
-
-          <button className="btn btn-primary btn-block" onClick={handleAdd}>
-            Adicionar à Sacola
+          <button
+            className="btn btn-primary btn-block"
+            onClick={handleAdd}
+            disabled={soldOut}
+          >
+            {soldOut ? "Produto esgotado" : "Adicionar à Sacola"}
           </button>
         </div>
       </div>
+
+      {zoomed && (
+        <div
+          className="zoom-overlay"
+          onClick={(e) => {
+            e.stopPropagation();
+            setZoomed(false);
+          }}
+        >
+          <img src={product.images[imageIndex] ?? ""} alt={product.title} />
+        </div>
+      )}
     </div>
   );
 }

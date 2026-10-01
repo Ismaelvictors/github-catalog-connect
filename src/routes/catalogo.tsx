@@ -16,7 +16,7 @@ export const Route = createFileRoute("/catalogo")({
       {
         name: "description",
         content:
-          "Explore o catálogo DZAMP: linhas Infantil, Jovem, Adulto e UV Manga Longa. Escolha cor, estampa e tamanho e peça pelo WhatsApp.",
+          "Explore o catálogo DZAMP: linhas Infantil, Jovem, Adulto e UV Manga Longa. Escolha tamanho e peça pelo WhatsApp.",
       },
       { property: "og:title", content: "Catálogo — DZAMP" },
       {
@@ -87,6 +87,7 @@ function CatalogPage() {
               <ProductCard
                 key={p.id}
                 product={p}
+                settings={data.settings}
                 onDetails={() => setSelected(p)}
                 onAdd={(item) => add(item)}
               />
@@ -96,7 +97,12 @@ function CatalogPage() {
       </section>
 
       {selected && (
-        <ProductModal product={selected} onClose={() => setSelected(null)} onAdd={(i) => add(i)} />
+        <ProductModal
+          product={selected}
+          settings={data.settings}
+          onClose={() => setSelected(null)}
+          onAdd={(i) => add(i)}
+        />
       )}
     </main>
   );

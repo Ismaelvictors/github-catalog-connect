@@ -2,7 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import type { ReactNode } from "react";
 import type { CartItem } from "@/lib/dzamp/types";
 
-const CART_KEY = "dzamp_cart";
+const CART_KEY = "dzamp_cart_v2";
 
 interface CartContextValue {
   items: CartItem[];
@@ -11,7 +11,9 @@ interface CartContextValue {
   setOpen: (open: boolean) => void;
   add: (item: Omit<CartItem, "key">) => void;
   updateQty: (key: string, delta: number) => void;
+  setQty: (key: string, qty: number) => void;
   remove: (key: string) => void;
+  clear: () => void;
 }
 
 const CartContext = createContext<CartContextValue | null>(null);
@@ -23,6 +25,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     try {
+      localStorage.removeItem("dzamp_cart");
       const raw = localStorage.getItem(CART_KEY);
       if (raw) setItems(JSON.parse(raw) as CartItem[]);
     } catch {
@@ -37,11 +40,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }, [items, hydrated]);
 
   const add = useCallback((item: Omit<CartItem, "key">) => {
-    const key = `${item.productId}|${item.size}|${item.color}|${item.estampa}|${item.note}`;
+    const key = `${item.productId}|${item.size}`;
     setItems((prev) => {
       const existing = prev.find((i) => i.key === key);
       if (existing) {
-        return prev.map((i) => (i.key === key ? { ...i, qty: i.qty + item.qty } : i));
+        return prev.map((i) => (i.key === key ? { ...i, ...item, key, qty: i.qty + item.qty } : i));
       }
       return [...prev, { ...item, key }];
     });
@@ -56,9 +59,17 @@ export function CartProvider({ children }: { children: ReactNode }) {
     );
   }, []);
 
+  const setQty = useCallback((key: string, qty: number) => {
+    setItems((prev) =>
+      prev.map((i) => (i.key === key ? { ...i, qty } : i)).filter((i) => i.qty > 0),
+    );
+  }, []);
+
   const remove = useCallback((key: string) => {
     setItems((prev) => prev.filter((i) => i.key !== key));
   }, []);
+
+  const clear = useCallback(() => setItems([]), []);
 
   const value = useMemo<CartContextValue>(
     () => ({
@@ -68,9 +79,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
       setOpen,
       add,
       updateQty,
+      setQty,
       remove,
+      clear,
     }),
-    [items, open, add, updateQty, remove],
+    [items, open, add, updateQty, setQty, remove, clear],
   );
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;

@@ -15,6 +15,13 @@
       "when": 1790868451638,
       "tag": "0001_admin_stock_orders",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1790868481452,
+      "tag": "0002_storage_policies_owner_claim",
+      "breakpoints": true
     }
   ]
 }

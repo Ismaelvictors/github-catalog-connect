@@ -1,5 +1,7 @@
 import { CATEGORIES } from "@/lib/dzamp/lines";
-import type { Category } from "@/lib/dzamp/types";
+import { formatBRL } from "@/lib/dzamp/format";
+import { groupOf } from "@/lib/dzamp/pricing";
+import type { Category, Product, StockEntry, StoreSettings } from "@/lib/dzamp/types";
 
 export function CategoryChips({
   active,
@@ -23,112 +25,78 @@ export function CategoryChips({
   );
 }
 
-export function ColorSelect({
-  value,
-  colors,
-  onChange,
-  id,
-}: {
-  value: string;
-  colors: { name: string; hex: string }[];
-  onChange: (v: string) => void;
-  id: string;
-}) {
-  const active = colors.find((c) => c.name === value);
-  return (
-    <div className="select-field">
-      <label htmlFor={id}>Cor</label>
-      <div className="select-wrap">
-        {active && (
-          <span className="select-dot" style={{ background: active.hex }} aria-hidden="true" />
-        )}
-        <select id={id} value={value} onChange={(e) => onChange(e.target.value)}>
-          {colors.map((c) => (
-            <option key={c.name} value={c.name}>
-              {c.name}
-            </option>
-          ))}
-        </select>
-      </div>
-    </div>
-  );
+export function isSoldOut(stock: StockEntry[]): boolean {
+  return stock.length === 0 || stock.every((s) => s.quantity <= 0);
 }
 
-export function EstampaSelect({
-  value,
-  estampas,
-  onChange,
-  id,
-}: {
-  value: string;
-  estampas: string[];
-  onChange: (v: string) => void;
-  id: string;
-}) {
+export function firstAvailableIfSingle(stock: StockEntry[]): string | null {
+  const avail = stock.filter((s) => s.quantity > 0);
+  return stock.length === 1 && avail.length === 1 ? (avail[0]?.size ?? null) : null;
+}
+
+export function WholesaleHint({ product, settings }: { product: Product; settings: StoreSettings }) {
+  if (!settings.wholesaleEnabled || !(product.wholesalePrice > 0 && product.wholesalePrice < product.price))
+    return null;
+  const g = groupOf(product.category);
+  const min = g === "uv" ? settings.wholesaleMinUv : settings.wholesaleMinTraditional;
   return (
-    <div className="select-field">
-      <label htmlFor={id}>Estampa</label>
-      <div className="select-wrap">
-        <select id={id} value={value} onChange={(e) => onChange(e.target.value)}>
-          {estampas.map((s) => (
-            <option key={s} value={s}>
-              {s}
-            </option>
-          ))}
-        </select>
-      </div>
-    </div>
+    <p className="wholesale-hint">
+      Atacado <strong>{formatBRL(product.wholesalePrice)}</strong>{" "}
+      {g === "uv" ? `a partir de ${min} peças UV` : `a partir de ${min} peças combinadas`}
+    </p>
   );
 }
 
 export function SizePills({
-  sizes,
+  stock,
   value,
   onChange,
   error,
-  note,
 }: {
-  sizes: string[];
+  stock: StockEntry[];
   value: string | null;
   onChange: (s: string) => void;
   error?: boolean | undefined;
-  note?: string | undefined;
 }) {
   return (
     <div className={`size-block ${error ? "size-block-error" : ""}`}>
       <div className="size-pills">
-        {sizes.map((s) => (
-          <button
-            key={s}
-            className={`size-pill ${value === s ? "size-active" : ""}`}
-            onClick={() => onChange(s)}
-            aria-pressed={value === s}
-          >
-            {s}
-          </button>
-        ))}
+        {stock.map((s) => {
+          const out = s.quantity <= 0;
+          return (
+            <button
+              key={s.size}
+              className={`size-pill ${value === s.size ? "size-active" : ""} ${out ? "size-out" : ""}`}
+              onClick={() => !out && onChange(s.size)}
+              disabled={out}
+              aria-pressed={value === s.size}
+              title={out ? "Esgotado" : undefined}
+            >
+              {s.size}
+            </button>
+          );
+        })}
       </div>
-      {note && <p className="size-note">{note}</p>}
     </div>
   );
 }
 
 export function SizeSelect({
-  sizes,
+  stock,
   value,
   onChange,
   error,
   note,
-  singleLabel,
   id,
+  disabled,
 }: {
-  sizes: string[];
+  stock: StockEntry[];
   value: string | null;
   onChange: (s: string) => void;
   error?: boolean | undefined;
   note?: string | undefined;
-  singleLabel?: string | undefined;
   id?: string;
+  disabled?: boolean;
 }) {
   return (
     <div className="select-field">
@@ -137,20 +105,22 @@ export function SizeSelect({
         <select
           id={id}
           value={value ?? ""}
+          disabled={disabled}
           onChange={(e) => {
             if (e.target.value) onChange(e.target.value);
           }}
-          className={["select-plain", error ? "select-invalid" : ""].filter(Boolean).join(" ") || undefined}
+          className={["select-plain", error ? "select-invalid" : ""].filter(Boolean).join(" ")}
           aria-invalid={error || undefined}
         >
           {!value && (
             <option value="" disabled>
-              Selecione
+              {disabled ? "Esgotado" : "Selecione"}
             </option>
           )}
-          {sizes.map((s) => (
-            <option key={s} value={s}>
-              {singleLabel && sizes.length === 1 ? singleLabel : s}
+          {stock.map((s) => (
+            <option key={s.size} value={s.size} disabled={s.quantity <= 0}>
+              {s.size}
+              {s.quantity <= 0 ? " (Esgotado)" : ""}
             </option>
           ))}
         </select>
@@ -164,10 +134,12 @@ export function QtyStepper({
   value,
   onChange,
   small,
+  max = 99,
 }: {
   value: number;
   onChange: (q: number) => void;
   small?: boolean;
+  max?: number;
 }) {
   return (
     <div className={`qty-stepper ${small ? "qty-stepper-sm" : ""}`}>
@@ -175,7 +147,7 @@ export function QtyStepper({
         −
       </button>
       <span>{value}</span>
-      <button onClick={() => onChange(Math.min(99, value + 1))} aria-label="Aumentar quantidade">
+      <button onClick={() => onChange(Math.min(max, value + 1))} aria-label="Aumentar quantidade">
         +
       </button>
     </div>

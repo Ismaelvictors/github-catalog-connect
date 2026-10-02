@@ -84,8 +84,6 @@ export function ProductForm({
         const path = `${crypto.randomUUID()}.${ext}`;
         const up = await supabase.storage.from(IMAGE_BUCKET).upload(path, file, { contentType: file.type });
         if (up.error) throw new Error("Falha ao enviar a foto.");
-        if (image.startsWith(STORAGE_PREFIX))
-          await supabase.storage.from(IMAGE_BUCKET).remove([image.slice(STORAGE_PREFIX.length)]);
         image = STORAGE_PREFIX + path;
       }
       const row = {
@@ -108,12 +106,18 @@ export function ProductForm({
       // Sync stock
       const keep = stock.map((s) => s.size);
       const removed = (product?.stock ?? []).filter((s) => !keep.includes(s.size)).map((s) => s.size);
-      if (removed.length) await supabase.from("product_stock").delete().eq("product_id", id).in("size", removed);
+      if (removed.length) {
+        const deleted = await supabase.from("product_stock").delete().eq("product_id", id).in("size", removed);
+        if (deleted.error) throw deleted.error;
+      }
+      if (!id) throw new Error("Não foi possível identificar o produto.");
       const up = await supabase.from("product_stock").upsert(
-        stock.map((s, i) => ({ product_id: id!, size: s.size, quantity: Math.max(0, Math.floor(s.quantity)), sort_order: i })),
+        stock.map((s, i) => ({ product_id: id, size: s.size, quantity: Math.max(0, Math.floor(s.quantity)), sort_order: i })),
         { onConflict: "product_id,size" },
       );
       if (up.error) throw up.error;
+      if (file && product?.imageRaw.startsWith(STORAGE_PREFIX))
+        await supabase.storage.from(IMAGE_BUCKET).remove([product.imageRaw.slice(STORAGE_PREFIX.length)]);
       onSaved();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Erro ao salvar.");

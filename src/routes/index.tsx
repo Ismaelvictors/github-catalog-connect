@@ -28,6 +28,8 @@ export const Route = createFileRoute("/")({
         property: "og:description",
         content: "Peças premium nas linhas Infantil, Jovem, Adulto e UV. Peça pelo WhatsApp.",
       },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
   loader: ({ context }) => context.queryClient.ensureQueryData(catalogQueryOptions),

@@ -100,7 +100,7 @@ const orderSchema = z.object({
 });
 
 export type PlaceOrderResult =
-  | { ok: true; code: string; subtotal: number; discount: number; total: number }
+  | { ok: true; code: string; subtotal: number; discount: number; total: number; items: { title: string; size: string; qty: number; unit_price: number }[] }
   | { ok: false; reason: "stock"; problems: { product_id: string; size: string; available: number }[] }
   | { ok: false; reason: "minimum"; minimum: number };
 

@@ -11,17 +11,22 @@ export function CartDrawer() {
   const { items, open, setOpen, updateQty, remove, clear } = useCart();
   const { data } = useQuery(catalogQueryOptions);
   const settings = data?.settings ?? DEFAULT_SETTINGS;
-  const pricing = useMemo(() => computeCart(items, settings), [items, settings]);
+  const currentItems = useMemo(() => items.map((item) => {
+    const product = data?.products.find((p) => p.id === item.productId);
+    return product ? { ...item, title: product.title, price: product.price, wholesalePrice: product.wholesalePrice, category: product.category, image: product.images[0] ?? item.image } : item;
+  }), [items, data]);
+  const pricing = useMemo(() => computeCart(currentItems, settings), [currentItems, settings]);
   const placeOrderFn = useServerFn(placeOrder);
   const queryClient = useQueryClient();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [completed, setCompleted] = useState<{ code: string; url: string } | null>(null);
 
   const stockOf = (productId: string, size: string) =>
     data?.products.find((p) => p.id === productId)?.stock.find((s) => s.size === size)?.quantity;
 
   const handleCheckout = async () => {
-    if (!pricing.minOrderReached || busy) return;
+    if (!pricing.minOrderReached || busy || !data || !settings.whatsappNumber || settings.whatsappNumber === "5500999999999") return;
     setBusy(true);
     setError(null);
     // Open window synchronously to avoid popup blockers
@@ -49,15 +54,15 @@ export function CartDrawer() {
       }
       const url = buildWhatsappLink(settings.whatsappNumber, {
         code: res.code,
-        items: items.map((i) => ({ qty: i.qty, title: i.title, size: i.size, unit: pricing.unitPrice(i) })),
+        items: res.items.map((i) => ({ qty: i.qty, title: i.title, size: i.size, unit: i.unit_price })),
         subtotal: Number(res.subtotal),
         discount: Number(res.discount),
         total: Number(res.total),
       });
+      setCompleted({ code: res.code, url });
       if (win) win.location.href = url;
-      else window.location.href = url;
       clear();
-      setOpen(false);
+      setOpen(true);
       await queryClient.invalidateQueries({ queryKey: ["catalog"] });
     } catch (e) {
       win?.close();
@@ -112,7 +117,13 @@ export function CartDrawer() {
           <p className="cart-min-tag">Pedido mínimo: {formatBRL(settings.minOrderValue)}</p>
         )}
 
-        {items.length === 0 ? (
+        {completed ? (
+          <div className="cart-empty">
+            <p>Pedido #{completed.code} registrado.</p>
+            <a className="btn-whatsapp" href={completed.url} target="_blank" rel="noreferrer">Abrir WhatsApp para enviar o pedido</a>
+            <button className="btn" onClick={() => setCompleted(null)}>Voltar à sacola</button>
+          </div>
+        ) : items.length === 0 ? (
           <div className="cart-empty">
             <p>Sua sacola está vazia.</p>
             <p className="muted">Explore o catálogo e adicione seus produtos favoritos.</p>
@@ -131,10 +142,10 @@ export function CartDrawer() {
               </div>
             )}
             <div className="cart-items">
-              {items.map((item) => {
+              {currentItems.map((item) => {
                 const unit = pricing.unitPrice(item);
                 const stock = stockOf(item.productId, item.size);
-                const over = stock !== undefined && item.qty > stock;
+                const over = stock === undefined || item.qty > stock;
                 return (
                   <div className="cart-item" key={item.key}>
                     <img src={item.image} alt={item.title} className="cart-thumb" />
@@ -153,7 +164,7 @@ export function CartDrawer() {
                       </span>
                       {over && (
                         <span className="cart-stock-warn">
-                          {stock === 0 ? "Esgotado" : `Apenas ${stock} em estoque`}
+                          {stock === undefined || stock === 0 ? "Esgotado" : `Apenas ${stock} em estoque`}
                         </span>
                       )}
                       <div className="qty-row">
@@ -165,7 +176,7 @@ export function CartDrawer() {
                           className="qty-btn"
                           onClick={() => updateQty(item.key, 1)}
                           aria-label="Aumentar"
-                          disabled={stock !== undefined && item.qty >= stock}
+                          disabled={stock === undefined || item.qty >= stock}
                         >
                           +
                         </button>
@@ -200,7 +211,10 @@ export function CartDrawer() {
               <button
                 className="btn-whatsapp"
                 onClick={handleCheckout}
-                disabled={!pricing.minOrderReached || busy}
+                disabled={!pricing.minOrderReached || busy || !data || items.some((item) => {
+                  const stock = stockOf(item.productId, item.size);
+                  return stock === undefined || item.qty > stock;
+                })}
               >
                 {busy ? "Registrando pedido..." : "Finalizar Pedido via WhatsApp"}
               </button>

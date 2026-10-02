@@ -17,6 +17,8 @@ export const Route = createFileRoute("/_authenticated/admin")({
       { property: "og:title", content: "Painel do lojista — DZAMP" },
       { property: "og:description", content: "Gerencie produtos, estoque e regras comerciais da DZAMP." },
       { name: "robots", content: "noindex" },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
   component: AdminPage,
@@ -34,6 +36,7 @@ async function fetchAdminProducts(): Promise<AdminProduct[]> {
     supabase.from("product_stock").select("product_id,size,quantity,sort_order").order("sort_order"),
   ]);
   if (p.error) throw p.error;
+  if (s.error) throw s.error;
   const paths = (p.data ?? [])
     .flatMap((r) => (Array.isArray(r.images) ? r.images.map(String) : []))
     .filter((i) => i.startsWith(STORAGE_PREFIX))
@@ -82,7 +85,7 @@ function AdminPage() {
     supabase.rpc("claim_owner_admin").then(({ data }) => setAuthorized(!!data));
   }, []);
 
-  const { data: products = [], isLoading } = useQuery({
+  const { data: products = [], isLoading, error: productsError } = useQuery({
     queryKey: ["admin-products"],
     queryFn: fetchAdminProducts,
     enabled: authorized === true,
@@ -114,13 +117,15 @@ function AdminPage() {
   };
 
   const toggleActive = async (p: AdminProduct) => {
-    await supabase.from("products").update({ is_active: !p.isActive }).eq("id", p.id);
+    const { error } = await supabase.from("products").update({ is_active: !p.isActive }).eq("id", p.id);
+    if (error) { window.alert("Não foi possível alterar o produto. Tente novamente."); return; }
     refresh();
   };
 
   const doDelete = async () => {
     if (!confirmDelete) return;
-    await supabase.from("products").delete().eq("id", confirmDelete.id);
+    const { error } = await supabase.from("products").delete().eq("id", confirmDelete.id);
+    if (error) { window.alert("Não foi possível excluir o produto. Tente novamente."); return; }
     if (confirmDelete.imageRaw.startsWith(STORAGE_PREFIX))
       await supabase.storage.from(IMAGE_BUCKET).remove([confirmDelete.imageRaw.slice(STORAGE_PREFIX.length)]);
     setConfirmDelete(null);
@@ -178,7 +183,9 @@ function AdminPage() {
             <button className="btn btn-primary" onClick={() => setEditing("new")}>+ Novo produto</button>
           </div>
 
-          {isLoading ? (
+          {productsError ? (
+            <p className="field-error">Não foi possível carregar os produtos. Atualize a página para tentar novamente.</p>
+          ) : isLoading ? (
             <p className="muted">Carregando produtos...</p>
           ) : filtered.length === 0 ? (
             <p className="muted">Nenhum produto encontrado.</p>

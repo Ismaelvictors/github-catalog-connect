@@ -101,14 +101,15 @@ function HomePage() {
               key={p.id}
               product={p}
               onDetails={() => setSelected(p)}
-              onAdd={(item) => add(item)}
+              settings={data.settings}
+                onAdd={(item) => add(item)}
             />
           ))}
         </div>
       </section>
 
       {selected && (
-        <ProductModal product={selected} onClose={() => setSelected(null)} onAdd={(i) => add(i)} />
+        <ProductModal product={selected} settings={data.settings} onClose={() => setSelected(null)} onAdd={(i) => add(i)} />
       )}
     </main>
   );

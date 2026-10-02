@@ -1,27 +1,27 @@
 import { useEffect, useState } from "react";
-import { CATEGORY_LABELS, lineFor, sizesFor } from "@/lib/dzamp/lines";
+import { CATEGORY_LABELS } from "@/lib/dzamp/lines";
 import { formatBRL } from "@/lib/dzamp/format";
-import type { CartItem, Product } from "@/lib/dzamp/types";
-import { ColorSelect, EstampaSelect, QtyStepper, SizePills } from "./product-controls";
+import type { CartItem, Product, StoreSettings } from "@/lib/dzamp/types";
+import { firstAvailableIfSingle, isSoldOut, QtyStepper, SizePills, WholesaleHint } from "./product-controls";
+import { toCartItem } from "./ProductCard";
 
 export function ProductModal({
   product,
+  settings,
   onClose,
   onAdd,
 }: {
   product: Product;
+  settings: StoreSettings;
   onClose: () => void;
   onAdd: (item: Omit<CartItem, "key">) => void;
 }) {
-  const line = lineFor(product.category);
+  const soldOut = isSoldOut(product.stock);
   const [imageIndex, setImageIndex] = useState(0);
-  const [color, setColor] = useState(line.colors[0]?.name ?? "");
-  const [estampa, setEstampa] = useState(line.estampas[0] ?? "");
-  const [size, setSize] = useState<string | null>(line.sizes.length === 1 ? (line.sizes[0] ?? null) : null);
+  const [size, setSize] = useState<string | null>(firstAvailableIfSingle(product.stock));
   const [qty, setQty] = useState(1);
-  const [note, setNote] = useState("");
-  const [sizeError, setSizeError] = useState(false);
-  const sizes = sizesFor(product.category);
+  const [error, setError] = useState<string | null>(null);
+  const available = product.stock.find((s) => s.size === size)?.quantity ?? 99;
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -32,21 +32,9 @@ export function ProductModal({
   }, [onClose]);
 
   const handleAdd = () => {
-    if (!size) {
-      setSizeError(true);
-      return;
-    }
-    onAdd({
-      productId: product.id,
-      title: product.title,
-      price: product.price,
-      size,
-      color,
-      estampa: line.hasEstampa ? estampa : "",
-      note: note.trim(),
-      qty,
-      image: product.images[0] ?? "",
-    });
+    if (!size) return setError("Selecione um tamanho para continuar.");
+    if (qty > available) return setError(`Apenas ${available} em estoque neste tamanho.`);
+    onAdd(toCartItem(product, size, qty));
     onClose();
   };
 
@@ -65,13 +53,12 @@ export function ProductModal({
         <div className="pm-gallery">
           <div className="pm-main">
             <img src={product.images[imageIndex] ?? ""} alt={product.title} />
+            {soldOut && <span className="soldout-badge">Esgotado</span>}
             {product.images.length > 1 && (
               <>
                 <button
                   className="pm-arrow pm-prev"
-                  onClick={() =>
-                    setImageIndex((imageIndex - 1 + product.images.length) % product.images.length)
-                  }
+                  onClick={() => setImageIndex((imageIndex - 1 + product.images.length) % product.images.length)}
                   aria-label="Imagem anterior"
                 >
                   ‹
@@ -86,77 +73,38 @@ export function ProductModal({
               </>
             )}
           </div>
-          {product.images.length > 1 && (
-            <div className="pm-thumbs">
-              {product.images.map((img, idx) => (
-                <button
-                  key={img}
-                  className={`pm-thumb ${idx === imageIndex ? "pm-thumb-active" : ""}`}
-                  onClick={() => setImageIndex(idx)}
-                  aria-label={`Imagem ${idx + 1}`}
-                >
-                  <img src={img} alt="" />
-                </button>
-              ))}
-            </div>
-          )}
         </div>
 
         <div className="pm-info">
-          <span className={`cat-tag cat-${product.category}`}>
-            {CATEGORY_LABELS[product.category]}
-          </span>
+          <span className={`cat-tag cat-${product.category}`}>{CATEGORY_LABELS[product.category]}</span>
           <h2>{product.title}</h2>
           <p className="pm-price">{formatBRL(product.price)}</p>
+          <WholesaleHint product={product} settings={settings} />
           {product.description && <p className="pm-desc">{product.description}</p>}
-
-          <div className="pm-options">
-            <ColorSelect id="pm-color" value={color} colors={line.colors} onChange={setColor} />
-            {line.hasEstampa && (
-              <EstampaSelect
-                id="pm-estampa"
-                value={estampa}
-                estampas={line.estampas}
-                onChange={setEstampa}
-              />
-            )}
-          </div>
 
           <div className="pm-sizes">
             <label>
               Tamanho <span className="required">*</span>
             </label>
             <SizePills
-              sizes={sizes}
+              stock={product.stock}
               value={size}
               onChange={(s) => {
                 setSize(s);
-                setSizeError(false);
+                setError(null);
               }}
-              error={sizeError}
-              note={line.sizesNote}
+              error={!!error}
             />
-            {sizeError && <p className="field-error">Selecione um tamanho para continuar.</p>}
+            {error && <p className="field-error">{error}</p>}
           </div>
 
           <div className="pm-qty">
             <label>Quantidade</label>
-            <QtyStepper value={qty} onChange={setQty} />
+            <QtyStepper value={qty} onChange={setQty} max={Math.max(1, available)} />
           </div>
 
-          <div className="pm-note">
-            <label htmlFor="pm-note-input">Observação (opcional)</label>
-            <textarea
-              id="pm-note-input"
-              rows={2}
-              placeholder="Ex.: preferência de cor, detalhes de entrega..."
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-            />
-          </div>
-
-          <button className="btn btn-primary btn-block" onClick={handleAdd}>
-            Adicionar à Sacola
+          <button className="btn btn-primary btn-block" onClick={handleAdd} disabled={soldOut}>
+            {soldOut ? "Produto esgotado" : "Adicionar à Sacola"}
           </button>
         </div>
       </div>

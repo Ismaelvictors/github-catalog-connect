@@ -1,8 +1,8 @@
 # DZAMP — conclusão do plano
 
-- [ ] Corrigir apresentação da sacola, bloqueio visual do mínimo e envio explícito ao WhatsApp após registro.
+- [x] Corrigir apresentação da sacola, bloqueio visual do mínimo e envio explícito ao WhatsApp após registro.
 - [x] Habilitar acesso por e-mail e corrigir mensagens do primeiro acesso.
 - [x] Substituir o WhatsApp provisório pelo número informado.
 - [x] Garantir pedidos atômicos com validação de estoque e valores.
 - [x] Validar páginas públicas, proteção do painel, sacola vazia e telas desktop/mobile sem erros.
-- [ ] Validar cadastro real, edição de estoque e pedido completo: aguarda o proprietário criar e confirmar a conta e cadastrar estoque real.
+- [ ] Validar o primeiro cadastro de conta e a edição de estoque pelo proprietário; o pedido completo e a baixa de estoque já foram testados. Aguarda a ação do proprietário nessas telas.

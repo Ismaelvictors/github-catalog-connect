@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { catalogQueryOptions, placeOrder } from "@/lib/catalog.functions";
@@ -20,7 +20,11 @@ export function CartDrawer() {
   const queryClient = useQueryClient();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [completed, setCompleted] = useState<{ code: string; url: string } | null>(null);
+  const [completed, setCompleted] = useState<{ code: string; url: string; total: number; count: number } | null>(null);
+
+  useEffect(() => {
+    if (items.length && completed) setCompleted(null);
+  }, [items.length]);
 
   const stockOf = (productId: string, size: string) =>
     data?.products.find((p) => p.id === productId)?.stock.find((s) => s.size === size)?.quantity;
@@ -29,14 +33,11 @@ export function CartDrawer() {
     if (!pricing.minOrderReached || busy || !data || !settings.whatsappNumber || settings.whatsappNumber === "5500999999999") return;
     setBusy(true);
     setError(null);
-    // Open window synchronously to avoid popup blockers
-    const win = window.open("", "_blank");
     try {
       const res = await placeOrderFn({
         data: { items: items.map((i) => ({ product_id: i.productId, size: i.size, qty: i.qty })) },
       });
       if (!res.ok) {
-        win?.close();
         if (res.reason === "stock") {
           const names = res.problems
             .map((p) => {
@@ -59,13 +60,11 @@ export function CartDrawer() {
         discount: Number(res.discount),
         total: Number(res.total),
       });
-      setCompleted({ code: res.code, url });
-      if (win) win.location.href = url;
+      setCompleted({ code: res.code, url, total: Number(res.total), count: res.items.reduce((sum, item) => sum + item.qty, 0) });
       clear();
       setOpen(true);
       await queryClient.invalidateQueries({ queryKey: ["catalog"] });
     } catch (e) {
-      win?.close();
       setError(e instanceof Error ? e.message : "Erro ao finalizar o pedido.");
     } finally {
       setBusy(false);
@@ -113,15 +112,22 @@ export function CartDrawer() {
           </button>
         </div>
 
-        {settings.minOrderEnabled && (
+        {settings.minOrderEnabled && !completed && (
           <p className="cart-min-tag">Pedido mínimo: {formatBRL(settings.minOrderValue)}</p>
         )}
 
         {completed ? (
-          <div className="cart-empty">
-            <p>Pedido #{completed.code} registrado.</p>
-            <a className="btn-whatsapp" href={completed.url} target="_blank" rel="noreferrer">Abrir WhatsApp para enviar o pedido</a>
-            <button className="btn" onClick={() => setCompleted(null)}>Voltar à sacola</button>
+          <div className="cart-completed" role="status">
+            <span className="cart-completed-mark" aria-hidden="true">✓</span>
+            <h3>Pedido registrado</h3>
+            <p className="cart-completed-code">#{completed.code}</p>
+            <div className="cart-completed-summary">
+              <span>{completed.count} {completed.count === 1 ? "peça" : "peças"}</span>
+              <strong>{formatBRL(completed.total)}</strong>
+            </div>
+            <p className="cart-completed-instruction">Falta enviar a mensagem no WhatsApp para confirmar o pedido com a loja.</p>
+            <a className="btn-whatsapp" href={completed.url} target="_blank" rel="noopener noreferrer">Abrir WhatsApp e enviar pedido ↗</a>
+            <button className="cart-back" onClick={() => setCompleted(null)}>Voltar à sacola</button>
           </div>
         ) : items.length === 0 ? (
           <div className="cart-empty">
@@ -131,7 +137,7 @@ export function CartDrawer() {
         ) : (
           <>
             {progress && (
-              <div className={`cart-progress cart-progress-${progress.tone}`}>
+              <div className={`cart-progress cart-progress-${progress.tone}`} aria-live="polite">
                 {progress.tone !== "ok" && (
                   <div className="cart-progress-bar" aria-hidden="true">
                     <span style={{ width: `${progress.pct}%` }} />
@@ -211,14 +217,14 @@ export function CartDrawer() {
               <button
                 className="btn-whatsapp"
                 onClick={handleCheckout}
-                disabled={!pricing.minOrderReached || busy || !data || items.some((item) => {
+                disabled={!pricing.minOrderReached || busy || !data || !settings.whatsappNumber || items.some((item) => {
                   const stock = stockOf(item.productId, item.size);
                   return stock === undefined || item.qty > stock;
                 })}
               >
-                {busy ? "Registrando pedido..." : "Finalizar Pedido via WhatsApp"}
+                {busy ? "Registrando pedido..." : !pricing.minOrderReached ? "Aguardando pedido mínimo" : "Registrar pedido e ir ao WhatsApp"}
               </button>
-              <p className="muted cart-hint">Você será direcionado ao WhatsApp para confirmar seu pedido.</p>
+              <p className="muted cart-hint">Depois de registrar, envie a mensagem pelo WhatsApp para confirmar com a loja.</p>
             </div>
           </>
         )}

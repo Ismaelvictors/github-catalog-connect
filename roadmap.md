@@ -5,4 +5,4 @@
 - [x] Substituir o WhatsApp provisório pelo número informado.
 - [x] Garantir pedidos atômicos com validação de estoque e valores.
 - [x] Validar páginas públicas, proteção do painel, sacola vazia e telas desktop/mobile sem erros.
-- [ ] Validar o primeiro cadastro de conta e a edição de estoque pelo proprietário; o pedido completo e a baixa de estoque já foram testados. Aguarda a ação do proprietário nessas telas.
+- [ ] Validar o primeiro acesso e a edição de estoque diretamente pelo proprietário; o acesso autenticado ao painel, o pedido completo e a baixa de estoque já foram testados. Aguarda a ação do proprietário nessas telas.

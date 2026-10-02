@@ -1,94 +1,77 @@
 import { useState } from "react";
-import { CATEGORY_LABELS, lineFor, sizesFor } from "@/lib/dzamp/lines";
+import { CATEGORY_LABELS } from "@/lib/dzamp/lines";
 import { formatBRL } from "@/lib/dzamp/format";
-import type { CartItem, Product } from "@/lib/dzamp/types";
-import { ColorSelect, EstampaSelect, QtyStepper, SizeSelect } from "./product-controls";
+import type { CartItem, Product, StoreSettings } from "@/lib/dzamp/types";
+import { firstAvailableIfSingle, isSoldOut, QtyStepper, SizeSelect, WholesaleHint } from "./product-controls";
+
+export function toCartItem(product: Product, size: string, qty: number): Omit<CartItem, "key"> {
+  return {
+    productId: product.id,
+    title: product.title,
+    price: product.price,
+    wholesalePrice: product.wholesalePrice,
+    category: product.category,
+    size,
+    qty,
+    image: product.images[0] ?? "",
+  };
+}
 
 export function ProductCard({
   product,
+  settings,
   onDetails,
   onAdd,
 }: {
   product: Product;
+  settings: StoreSettings;
   onDetails: () => void;
   onAdd: (item: Omit<CartItem, "key">) => void;
 }) {
-  const line = lineFor(product.category);
-  const [color, setColor] = useState(line.colors[0]?.name ?? "");
-  const [estampa, setEstampa] = useState(line.estampas[0] ?? "");
-  const [size, setSize] = useState<string | null>(line.sizes.length === 1 ? (line.sizes[0] ?? null) : null);
+  const soldOut = isSoldOut(product.stock);
+  const [size, setSize] = useState<string | null>(firstAvailableIfSingle(product.stock));
   const [qty, setQty] = useState(1);
-  const [sizeError, setSizeError] = useState(false);
-  const sizes = sizesFor(product.category);
+  const [error, setError] = useState<string | null>(null);
+  const available = product.stock.find((s) => s.size === size)?.quantity ?? 99;
 
   const handleAdd = () => {
-    if (!size) {
-      setSizeError(true);
-      return;
-    }
-    onAdd({
-      productId: product.id,
-      title: product.title,
-      price: product.price,
-      size,
-      color,
-      estampa: line.hasEstampa ? estampa : "",
-      note: "",
-      qty,
-      image: product.images[0] ?? "",
-    });
-    setSize(line.sizes.length === 1 ? (line.sizes[0] ?? null) : null);
+    if (!size) return setError("Selecione um tamanho.");
+    if (qty > available) return setError(`Apenas ${available} em estoque.`);
+    onAdd(toCartItem(product, size, qty));
+    setSize(firstAvailableIfSingle(product.stock));
     setQty(1);
-    setSizeError(false);
+    setError(null);
   };
 
   return (
-    <article className="card">
-      <button
-        className="card-media"
-        onClick={onDetails}
-        aria-label={`Ver detalhes de ${product.title}`}
-      >
+    <article className={`card ${soldOut ? "card-soldout" : ""}`}>
+      <button className="card-media" onClick={onDetails} aria-label={`Ver detalhes de ${product.title}`}>
         <img src={product.images[0] ?? ""} alt={product.title} loading="lazy" />
-        <span className={`cat-tag cat-${product.category}`}>
-          {CATEGORY_LABELS[product.category]}
-        </span>
+        <span className={`cat-tag cat-${product.category}`}>{CATEGORY_LABELS[product.category]}</span>
+        {soldOut && <span className="soldout-badge">Esgotado</span>}
       </button>
       <div className="card-body">
         <h3>{product.title}</h3>
         <p className="card-price">{formatBRL(product.price)}</p>
+        <WholesaleHint product={product} settings={settings} />
 
         <div className="card-selects">
-          <ColorSelect
-            id={`card-color-${product.id}`}
-            value={color}
-            colors={line.colors}
-            onChange={setColor}
-          />
-          {line.hasEstampa && (
-            <EstampaSelect
-              id={`card-estampa-${product.id}`}
-              value={estampa}
-              estampas={line.estampas}
-              onChange={setEstampa}
-            />
-          )}
           <SizeSelect
             id={`card-size-${product.id}`}
-            sizes={sizes}
+            stock={product.stock}
             value={size}
+            disabled={soldOut}
             onChange={(s) => {
               setSize(s);
-              setSizeError(false);
+              setError(null);
             }}
-            error={sizeError}
-            note={sizeError ? "Selecione um tamanho." : undefined}
-            singleLabel={line.sizesSelectLabel}
+            error={!!error}
+            note={error ?? undefined}
           />
           <div className="card-buy-row">
-            <QtyStepper value={qty} onChange={setQty} small />
-            <button className="btn btn-primary card-add" onClick={handleAdd}>
-              Adicionar
+            <QtyStepper value={qty} onChange={setQty} small max={Math.max(1, available)} />
+            <button className="btn btn-primary card-add" onClick={handleAdd} disabled={soldOut}>
+              {soldOut ? "Esgotado" : "Adicionar"}
             </button>
           </div>
           <button className="card-details-link" onClick={onDetails}>

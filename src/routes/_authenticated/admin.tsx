@@ -17,6 +17,8 @@ export const Route = createFileRoute("/_authenticated/admin")({
       { property: "og:title", content: "Painel do lojista — DZAMP" },
       { property: "og:description", content: "Gerencie produtos, estoque e regras comerciais da DZAMP." },
       { name: "robots", content: "noindex" },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
   component: AdminPage,

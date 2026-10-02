@@ -14,6 +14,8 @@ export const Route = createFileRoute("/contatos")({
         property: "og:description",
         content: "WhatsApp, Instagram e e-mail da DZAMP para pedidos e dúvidas.",
       },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
   component: ContactsPage,

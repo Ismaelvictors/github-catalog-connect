@@ -23,7 +23,7 @@ export function CartDrawer() {
   const [completed, setCompleted] = useState<{ code: string; url: string; total: number; count: number } | null>(null);
 
   useEffect(() => {
-    if (items.length && completed) setCompleted(null);
+    if (items.length) setCompleted(null);
   }, [items.length]);
 
   const stockOf = (productId: string, size: string) =>
@@ -125,7 +125,7 @@ export function CartDrawer() {
               <span>{completed.count} {completed.count === 1 ? "peça" : "peças"}</span>
               <strong>{formatBRL(completed.total)}</strong>
             </div>
-            <p className="cart-completed-instruction">Falta enviar a mensagem no WhatsApp para confirmar o pedido com a loja.</p>
+            <p className="cart-completed-instruction">Envie a mensagem no WhatsApp para confirmar o pedido com a loja.</p>
             <a className="btn-whatsapp" href={completed.url} target="_blank" rel="noopener noreferrer">Abrir WhatsApp e enviar pedido ↗</a>
             <button className="cart-back" onClick={() => setCompleted(null)}>Voltar à sacola</button>
           </div>

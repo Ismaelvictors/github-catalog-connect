@@ -7,6 +7,9 @@
   --ink: #101418;
   --ink-soft: #3d4652;
   --muted: #55606e;
+  --dzamp-muted: #55606e;
+  --whatsapp: #1d9d55;
+  --whatsapp-hover: #167d43;
   --line: #e3e7ee;
   --bg: #fbfbf9;
   --white: #ffffff;
@@ -993,7 +996,7 @@ select {
 .cart-min-tag {
   margin: 0;
   padding: 16px 24px 8px;
-  color: var(--muted);
+  color: var(--dzamp-muted);
   font-size: .85rem;
   font-weight: 600;
 }
@@ -1051,7 +1054,7 @@ select {
 }
 
 .cart-item-info > strong { color: var(--ink); overflow-wrap: anywhere; }
-.cart-item-info .muted { color: var(--muted); }
+.cart-item-info .muted { color: var(--dzamp-muted); }
 .cart-stock-warn { color: var(--red-dark); font-size: .82rem; font-weight: 700; }
 
 .cart-note {
@@ -1142,14 +1145,14 @@ select {
 
 .btn-whatsapp:disabled, .btn-whatsapp:disabled:hover {
   background: var(--line);
-  color: var(--muted);
+  color: var(--ink-soft);
   cursor: not-allowed;
 }
 
 .cart-completed { padding: 40px 24px; display: flex; flex-direction: column; align-items: stretch; text-align: center; gap: 12px; }
 .cart-completed-mark { align-self: center; display: grid; place-items: center; width: 48px; height: 48px; border-radius: 50%; background: var(--blue-pastel-soft); color: var(--navy); font-size: 1.5rem; font-weight: 700; }
 .cart-completed h3 { margin: 4px 0 0; font-size: 1.35rem; }
-.cart-completed-code { margin: 0; color: var(--muted); font-weight: 700; }
+.cart-completed-code { margin: 0; color: var(--dzamp-muted); font-weight: 700; }
 .cart-completed-summary { display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); padding: 16px 0; margin-top: 12px; }
 .cart-completed-instruction { text-align: left; margin: 8px 0; line-height: 1.5; color: var(--ink-soft); }
 .cart-back { border: 0; background: transparent; color: var(--ink-soft); padding: 10px; font-weight: 700; }
@@ -1165,6 +1168,7 @@ select {
 .cart-hint {
   margin: 0;
   text-align: center;
+  color: var(--dzamp-muted);
 }
 
 /* ---------- Admin ---------- */

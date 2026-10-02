@@ -1,105 +1,101 @@
 import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { catalogQueryOptions, placeOrder } from "@/lib/catalog.functions";
 import { buildWhatsappLink, formatBRL } from "@/lib/dzamp/format";
-import { computeCart, GROUP_LABEL } from "@/lib/dzamp/pricing";
+import { computeCart, GROUP_LABEL, type WholesaleGroup } from "@/lib/dzamp/pricing";
 import { DEFAULT_SETTINGS } from "@/lib/dzamp/settings";
 import { useCart } from "./cart";
 
 export function CartDrawer() {
   const { items, open, setOpen, updateQty, remove, clear } = useCart();
   const { data } = useQuery(catalogQueryOptions);
-  const queryClient = useQueryClient();
   const settings = data?.settings ?? DEFAULT_SETTINGS;
   const pricing = useMemo(() => computeCart(items, settings), [items, settings]);
-  const [submitting, setSubmitting] = useState(false);
-  const [alert, setAlert] = useState<string | null>(null);
+  const placeOrderFn = useServerFn(placeOrder);
+  const queryClient = useQueryClient();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const trad = pricing.groups.traditional;
-  const uv = pricing.groups.uv;
-  const wholesaleReady =
-    settings.wholesaleEnabled &&
-    ((trad.hasItems && trad.active) || (uv.hasItems && uv.active)) &&
-    (!trad.hasItems || trad.active) &&
-    (!uv.hasItems || uv.active);
-  const canCheckout = pricing.minOrderReached && items.length > 0;
+  const stockOf = (productId: string, size: string) =>
+    data?.products.find((p) => p.id === productId)?.stock.find((s) => s.size === size)?.quantity;
 
+  const handleCheckout = async () => {
+    if (!pricing.minOrderReached || busy) return;
+    setBusy(true);
+    setError(null);
+    // Open window synchronously to avoid popup blockers
+    const win = window.open("", "_blank");
+    try {
+      const res = await placeOrderFn({
+        data: { items: items.map((i) => ({ product_id: i.productId, size: i.size, qty: i.qty })) },
+      });
+      if (!res.ok) {
+        win?.close();
+        if (res.reason === "stock") {
+          const names = res.problems
+            .map((p) => {
+              const it = items.find((i) => i.productId === p.product_id && i.size === p.size);
+              return it ? `${it.title} (${p.size}): ${p.available} disponível` : null;
+            })
+            .filter(Boolean)
+            .join("; ");
+          setError(`Alguns itens não têm estoque suficiente — ${names}. Ajuste a sacola e tente novamente.`);
+        } else {
+          setError(`O pedido mínimo é ${formatBRL(res.minimum)}.`);
+        }
+        await queryClient.invalidateQueries({ queryKey: ["catalog"] });
+        return;
+      }
+      const url = buildWhatsappLink(settings.whatsappNumber, {
+        code: res.code,
+        items: items.map((i) => ({ qty: i.qty, title: i.title, size: i.size, unit: pricing.unitPrice(i) })),
+        subtotal: Number(res.subtotal),
+        discount: Number(res.discount),
+        total: Number(res.total),
+      });
+      if (win) win.location.href = url;
+      else window.location.href = url;
+      clear();
+      setOpen(false);
+      await queryClient.invalidateQueries({ queryKey: ["catalog"] });
+    } catch (e) {
+      win?.close();
+      setError(e instanceof Error ? e.message : "Erro ao finalizar o pedido.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  // Hybrid progress: minimum value first, then wholesale target
   const progress = (() => {
-    if (!pricing.minOrderReached && settings.minOrderEnabled) {
+    if (!items.length) return null;
+    if (settings.minOrderEnabled && !pricing.minOrderReached) {
       const pct = Math.min(100, (pricing.total / settings.minOrderValue) * 100);
       return {
         pct,
         label: `${formatBRL(pricing.total)} / ${formatBRL(settings.minOrderValue)}`,
-        hint: `Faltam ${formatBRL(pricing.missingForMin)} para liberar o envio do pedido.`,
+        text: `Faltam ${formatBRL(pricing.missingForMin)} para liberar o envio do pedido.`,
+        tone: "warn" as const,
       };
     }
-    if (settings.wholesaleEnabled && !wholesaleReady) {
-      const focus = trad.hasItems && !trad.active ? trad : uv.hasItems && !uv.active ? uv : trad;
-      const groupKey = focus === uv ? "uv" : "traditional";
-      const missing = Math.max(0, focus.min - focus.qty);
-      const pct = focus.min > 0 ? Math.min(100, (focus.qty / focus.min) * 100) : 100;
+    if (!settings.wholesaleEnabled) return null;
+    const groups = (["traditional", "uv"] as WholesaleGroup[]).filter((g) => pricing.groups[g].hasItems);
+    const pending = groups.find((g) => !pricing.groups[g].active);
+    if (pending) {
+      const g = pricing.groups[pending];
+      const missing = g.min - g.qty;
       return {
-        pct,
-        label: `${focus.qty} / ${focus.min} peças ${groupKey === "uv" ? "UV" : "tradicionais"}`,
-        hint: `Pedido liberado! Faltam só ${missing} peças para você economizar ainda mais com preço de atacado.`,
+        pct: Math.min(100, (g.qty / g.min) * 100),
+        label: `${g.qty} / ${g.min} peças ${pending === "uv" ? "UV" : `(${GROUP_LABEL[pending]})`}`,
+        text: `${settings.minOrderEnabled ? "Pedido liberado! " : ""}Faltam só ${missing} ${
+          missing === 1 ? "peça" : "peças"
+        } para você economizar ainda mais com preço de atacado.`,
+        tone: "info" as const,
       };
     }
-    return null;
+    return { pct: 100, label: "", text: "🎉 Preço de atacado aplicado em todas as peças!", tone: "ok" as const };
   })();
-
-  const handleCheckout = async () => {
-    if (!canCheckout || submitting) return;
-    setAlert(null);
-    setSubmitting(true);
-    try {
-      const result = await placeOrder({
-        data: {
-          items: items.map((i) => ({
-            product_id: i.productId,
-            size: i.size,
-            qty: i.qty,
-          })),
-        },
-      });
-
-      if (!result.ok) {
-        if (result.reason === "stock") {
-          const names = result.problems
-            .map((p) => {
-              const item = items.find((i) => i.productId === p.product_id && i.size === p.size);
-              return `${item?.title ?? "Item"} (${p.size}): só ${p.available} un.`;
-            })
-            .join(" · ");
-          setAlert(`Estoque insuficiente: ${names}`);
-          await queryClient.invalidateQueries({ queryKey: ["catalog"] });
-          return;
-        }
-        setAlert(`Pedido mínimo de ${formatBRL(result.minimum)} ainda não atingido.`);
-        return;
-      }
-
-      const link = buildWhatsappLink(settings.whatsappNumber, {
-        code: result.code,
-        items: items.map((i) => ({
-          qty: i.qty,
-          title: i.title,
-          size: i.size,
-          unit: pricing.unitPrice(i),
-        })),
-        subtotal: result.subtotal,
-        discount: result.discount,
-        total: result.total,
-      });
-      clear();
-      setOpen(false);
-      window.open(link, "_blank", "noopener,noreferrer");
-      await queryClient.invalidateQueries({ queryKey: ["catalog"] });
-    } catch (err) {
-      setAlert(err instanceof Error ? err.message : "Não foi possível finalizar o pedido.");
-    } finally {
-      setSubmitting(false);
-    }
-  };
 
   return (
     <>
@@ -112,6 +108,10 @@ export function CartDrawer() {
           </button>
         </div>
 
+        {settings.minOrderEnabled && (
+          <p className="cart-min-tag">Pedido mínimo: {formatBRL(settings.minOrderValue)}</p>
+        )}
+
         {items.length === 0 ? (
           <div className="cart-empty">
             <p>Sua sacola está vazia.</p>
@@ -119,22 +119,45 @@ export function CartDrawer() {
           </div>
         ) : (
           <>
+            {progress && (
+              <div className={`cart-progress cart-progress-${progress.tone}`}>
+                {progress.tone !== "ok" && (
+                  <div className="cart-progress-bar" aria-hidden="true">
+                    <span style={{ width: `${progress.pct}%` }} />
+                  </div>
+                )}
+                {progress.label && <span className="cart-progress-label">{progress.label}</span>}
+                <p>{progress.text}</p>
+              </div>
+            )}
             <div className="cart-items">
               {items.map((item) => {
                 const unit = pricing.unitPrice(item);
-                const discounted = unit < item.price;
+                const stock = stockOf(item.productId, item.size);
+                const over = stock !== undefined && item.qty > stock;
                 return (
                   <div className="cart-item" key={item.key}>
                     <img src={item.image} alt={item.title} className="cart-thumb" />
                     <div className="cart-item-info">
                       <strong>{item.title}</strong>
-                      <span className="muted">Tamanho: {item.size}</span>
+                      <span className="muted">
+                        Tamanho: {item.size} ·{" "}
+                        {unit < item.price ? (
+                          <>
+                            <s>{formatBRL(item.price)}</s> <b className="price-wholesale">{formatBRL(unit)}</b>
+                          </>
+                        ) : (
+                          formatBRL(unit)
+                        )}{" "}
+                        un.
+                      </span>
+                      {over && (
+                        <span className="cart-stock-warn">
+                          {stock === 0 ? "Esgotado" : `Apenas ${stock} em estoque`}
+                        </span>
+                      )}
                       <div className="qty-row">
-                        <button
-                          className="qty-btn"
-                          onClick={() => updateQty(item.key, -1)}
-                          aria-label="Diminuir"
-                        >
+                        <button className="qty-btn" onClick={() => updateQty(item.key, -1)} aria-label="Diminuir">
                           −
                         </button>
                         <span>{item.qty}</span>
@@ -142,6 +165,7 @@ export function CartDrawer() {
                           className="qty-btn"
                           onClick={() => updateQty(item.key, 1)}
                           aria-label="Aumentar"
+                          disabled={stock !== undefined && item.qty >= stock}
                         >
                           +
                         </button>
@@ -150,81 +174,37 @@ export function CartDrawer() {
                         </button>
                       </div>
                     </div>
-                    <div className="cart-item-price">
-                      {discounted && (
-                        <span className="price-strike">{formatBRL(item.qty * item.price)}</span>
-                      )}
-                      <span>{formatBRL(item.qty * unit)}</span>
-                    </div>
+                    <div className="cart-item-price">{formatBRL(item.qty * unit)}</div>
                   </div>
                 );
               })}
             </div>
-
             <div className="cart-foot">
-              {progress && (
-                <div className="cart-progress">
-                  <div className="cart-progress-track">
-                    <div className="cart-progress-fill" style={{ width: `${progress.pct}%` }} />
-                  </div>
-                  <p className="cart-progress-label">{progress.label}</p>
-                  <p className="muted">{progress.hint}</p>
-                </div>
-              )}
-
-              {wholesaleReady && pricing.discount > 0 && (
-                <div className="cart-wholesale-win">
-                  <p className="cart-win-seal">Preço de atacado aplicado nas peças elegíveis!</p>
-                  {(trad.hasItems || uv.hasItems) && (
-                    <p className="muted">
-                      {[trad.hasItems && trad.active && GROUP_LABEL.traditional, uv.hasItems && uv.active && GROUP_LABEL.uv]
-                        .filter(Boolean)
-                        .join(" · ")}
-                    </p>
-                  )}
-                </div>
-              )}
-
-              <div className="subtotal">
-                <span>Subtotal</span>
-                <strong className={pricing.discount > 0 ? "price-strike" : ""}>
-                  {formatBRL(pricing.subtotal)}
-                </strong>
-              </div>
               {pricing.discount > 0 && (
                 <>
-                  <div className="subtotal discount-row">
-                    <span>Desconto atacado</span>
-                    <strong>-{formatBRL(pricing.discount)}</strong>
+                  <div className="subtotal subtotal-sm">
+                    <span>Subtotal</span>
+                    <span>{formatBRL(pricing.subtotal)}</span>
                   </div>
-                  <div className="subtotal">
-                    <span>Total</span>
-                    <strong>{formatBRL(pricing.total)}</strong>
+                  <div className="subtotal subtotal-sm price-wholesale">
+                    <span>Desconto atacado</span>
+                    <span>-{formatBRL(pricing.discount)}</span>
                   </div>
                 </>
               )}
-
-              {alert && <p className="cart-alert">{alert}</p>}
-
+              <div className="subtotal">
+                <span>Total</span>
+                <strong>{formatBRL(pricing.total)}</strong>
+              </div>
+              {error && <p className="field-error">{error}</p>}
               <button
-                type="button"
-                className={`btn-whatsapp ${canCheckout ? "" : "is-disabled"}`}
-                disabled={!canCheckout || submitting}
+                className="btn-whatsapp"
                 onClick={handleCheckout}
+                disabled={!pricing.minOrderReached || busy}
               >
-                {submitting
-                  ? "Validando estoque..."
-                  : canCheckout
-                    ? "Finalizar Pedido via WhatsApp"
-                    : "Atinga o pedido mínimo"}
+                {busy ? "Registrando pedido..." : "Finalizar Pedido via WhatsApp"}
               </button>
-              <p className="muted cart-hint">
-                {canCheckout
-                  ? "O estoque será reservado e você confirmará o pedido no WhatsApp."
-                  : settings.minOrderEnabled
-                    ? `Pedido mínimo: ${formatBRL(settings.minOrderValue)}.`
-                    : "Adicione itens para continuar."}
-              </p>
+              <p className="muted cart-hint">Você será direcionado ao WhatsApp para confirmar seu pedido.</p>
             </div>
           </>
         )}

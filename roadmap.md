@@ -1,5 +1,6 @@
 # DZAMP — conclusão do plano
 
+- [ ] Corrigir apresentação da sacola, bloqueio visual do mínimo e envio explícito ao WhatsApp após registro.
 - [x] Habilitar acesso por e-mail e corrigir mensagens do primeiro acesso.
 - [x] Substituir o WhatsApp provisório pelo número informado.
 - [x] Garantir pedidos atômicos com validação de estoque e valores.

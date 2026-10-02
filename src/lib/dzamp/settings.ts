@@ -1,7 +1,7 @@
 import type { StoreSettings } from "./types";
 
 export const DEFAULT_SETTINGS: StoreSettings = {
-  whatsappNumber: "5500999999999",
+  whatsappNumber: "5585981762787",
   minOrderEnabled: true,
   minOrderValue: 200,
   wholesaleEnabled: true,

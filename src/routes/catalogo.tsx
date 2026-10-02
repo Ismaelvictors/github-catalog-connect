@@ -16,13 +16,15 @@ export const Route = createFileRoute("/catalogo")({
       {
         name: "description",
         content:
-          "Explore o catálogo DZAMP: linhas Infantil, Jovem, Adulto e UV Manga Longa. Escolha cor, estampa e tamanho e peça pelo WhatsApp.",
+          "Explore o catálogo DZAMP: linhas Infantil, Jovem, Adulto e UV Manga Longa. Escolha o tamanho e peça pelo WhatsApp.",
       },
       { property: "og:title", content: "Catálogo — DZAMP" },
       {
         property: "og:description",
         content: "Peças premium das linhas Infantil, Jovem, Adulto e UV. Pedido direto no WhatsApp.",
       },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
   loader: ({ context }) => context.queryClient.ensureQueryData(catalogQueryOptions),

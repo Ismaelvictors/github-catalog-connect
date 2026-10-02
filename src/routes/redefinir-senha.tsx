@@ -10,6 +10,8 @@ export const Route = createFileRoute("/redefinir-senha")({
       { property: "og:title", content: "Redefinir senha — DZAMP" },
       { property: "og:description", content: "Defina uma nova senha para o painel DZAMP." },
       { name: "robots", content: "noindex" },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
   component: ResetPage,

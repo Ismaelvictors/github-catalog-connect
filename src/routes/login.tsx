@@ -2,6 +2,17 @@ import { useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 
+const OWNER_EMAIL = "victors.testes.dev@gmail.com";
+
+function authMessage(message: string): string {
+  if (/email provider disabled|email logins are disabled/i.test(message)) return "O acesso por e-mail está indisponível no momento. Tente novamente mais tarde.";
+  if (/email not confirmed/i.test(message)) return "Confirme seu e-mail pelo link recebido antes de entrar.";
+  if (/invalid login credentials/i.test(message)) return "E-mail ou senha incorretos. Se ainda não criou sua conta, use Primeiro acesso.";
+  if (/user already registered/i.test(message)) return "Este e-mail já tem uma conta. Entre ou use Esqueci minha senha.";
+  if (/rate limit|too many requests/i.test(message)) return "Muitas tentativas. Aguarde alguns minutos e tente novamente.";
+  return message;
+}
+
 export const Route = createFileRoute("/login")({
   head: () => ({
     meta: [
@@ -10,6 +21,8 @@ export const Route = createFileRoute("/login")({
       { property: "og:title", content: "Acesso do lojista — DZAMP" },
       { property: "og:description", content: "Área restrita para gestão de produtos e estoque DZAMP." },
       { name: "robots", content: "noindex" },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
   component: LoginPage,
@@ -30,27 +43,34 @@ function LoginPage() {
     try {
       if (mode === "login") {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) throw new Error("E-mail ou senha inválidos, ou e-mail ainda não confirmado.");
-        const { data: isAdmin } = await supabase.rpc("claim_owner_admin");
-        if (!isAdmin) {
+        if (error) throw new Error(authMessage(error.message));
+        const { data: isAdmin, error: roleError } = await supabase.rpc("claim_owner_admin");
+        if (roleError || !isAdmin) {
           await supabase.auth.signOut();
-          throw new Error("Esta conta não tem acesso ao painel.");
+          throw new Error(roleError ? "Não foi possível validar seu acesso. Tente novamente." : "Esta conta não tem acesso ao painel.");
         }
         navigate({ to: "/admin", replace: true });
       } else if (mode === "signup") {
-        const { error } = await supabase.auth.signUp({
-          email,
+        if (email.trim().toLowerCase() !== OWNER_EMAIL) throw new Error("Use o e-mail autorizado do lojista para criar o primeiro acesso.");
+        const { data, error } = await supabase.auth.signUp({
+          email: email.trim().toLowerCase(),
           password,
           options: { emailRedirectTo: `${window.location.origin}/login` },
         });
-        if (error) throw new Error(error.message);
-        setMsg({ type: "ok", text: "Conta criada! Confirme pelo link enviado ao seu e-mail e depois entre." });
+        if (error) throw new Error(authMessage(error.message));
+        if (data.session) {
+          const { data: isAdmin, error: roleError } = await supabase.rpc("claim_owner_admin");
+          if (roleError || !isAdmin) throw new Error("Não foi possível validar seu acesso. Tente entrar novamente.");
+          navigate({ to: "/admin", replace: true });
+          return;
+        }
+        setMsg({ type: "ok", text: "Confira sua caixa de entrada e confirme o e-mail pelo link enviado. Depois, entre com sua senha." });
         setMode("login");
       } else {
         const { error } = await supabase.auth.resetPasswordForEmail(email, {
           redirectTo: `${window.location.origin}/redefinir-senha`,
         });
-        if (error) throw new Error(error.message);
+        if (error) throw new Error(authMessage(error.message));
         setMsg({ type: "ok", text: "Enviamos um link de redefinição para seu e-mail." });
       }
     } catch (err) {

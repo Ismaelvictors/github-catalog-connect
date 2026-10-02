@@ -109,8 +109,9 @@ export function ProductForm({
       const keep = stock.map((s) => s.size);
       const removed = (product?.stock ?? []).filter((s) => !keep.includes(s.size)).map((s) => s.size);
       if (removed.length) await supabase.from("product_stock").delete().eq("product_id", id).in("size", removed);
+      if (!id) throw new Error("Não foi possível identificar o produto.");
       const up = await supabase.from("product_stock").upsert(
-        stock.map((s, i) => ({ product_id: id!, size: s.size, quantity: Math.max(0, Math.floor(s.quantity)), sort_order: i })),
+        stock.map((s, i) => ({ product_id: id, size: s.size, quantity: Math.max(0, Math.floor(s.quantity)), sort_order: i })),
         { onConflict: "product_id,size" },
       );
       if (up.error) throw up.error;

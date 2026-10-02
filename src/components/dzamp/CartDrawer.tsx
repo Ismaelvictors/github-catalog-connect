@@ -62,7 +62,7 @@ export function CartDrawer() {
       setCompleted({ code: res.code, url });
       if (win) win.location.href = url;
       clear();
-      setOpen(false);
+      setOpen(true);
       await queryClient.invalidateQueries({ queryKey: ["catalog"] });
     } catch (e) {
       win?.close();
@@ -145,7 +145,7 @@ export function CartDrawer() {
               {currentItems.map((item) => {
                 const unit = pricing.unitPrice(item);
                 const stock = stockOf(item.productId, item.size);
-                const over = stock !== undefined && item.qty > stock;
+                const over = stock === undefined || item.qty > stock;
                 return (
                   <div className="cart-item" key={item.key}>
                     <img src={item.image} alt={item.title} className="cart-thumb" />
@@ -164,7 +164,7 @@ export function CartDrawer() {
                       </span>
                       {over && (
                         <span className="cart-stock-warn">
-                          {stock === 0 ? "Esgotado" : `Apenas ${stock} em estoque`}
+                          {stock === undefined || stock === 0 ? "Esgotado" : `Apenas ${stock} em estoque`}
                         </span>
                       )}
                       <div className="qty-row">
@@ -176,7 +176,7 @@ export function CartDrawer() {
                           className="qty-btn"
                           onClick={() => updateQty(item.key, 1)}
                           aria-label="Aumentar"
-                          disabled={stock !== undefined && item.qty >= stock}
+                          disabled={stock === undefined || item.qty >= stock}
                         >
                           +
                         </button>

@@ -2,7 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import type { ReactNode } from "react";
 import type { CartItem } from "@/lib/dzamp/types";
 
-const CART_KEY = "dzamp_cart_v2";
+const CART_KEY = "dzamp_cart_v3";
 
 interface CartContextValue {
   items: CartItem[];
@@ -26,6 +26,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     try {
       localStorage.removeItem("dzamp_cart");
+      localStorage.removeItem("dzamp_cart_v2");
       const raw = localStorage.getItem(CART_KEY);
       if (raw) setItems(JSON.parse(raw) as CartItem[]);
     } catch {

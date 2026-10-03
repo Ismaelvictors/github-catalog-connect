@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/external-db-client";
 import { CATEGORY_LABELS, LINE_CONFIG } from "@/lib/dzamp/lines";
 import { IMAGE_BUCKET, STORAGE_PREFIX } from "@/lib/dzamp/settings";
 import type { Category, StockEntry } from "@/lib/dzamp/types";

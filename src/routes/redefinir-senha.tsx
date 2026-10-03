@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/external-db-client";
 
 export const Route = createFileRoute("/redefinir-senha")({
   head: () => ({

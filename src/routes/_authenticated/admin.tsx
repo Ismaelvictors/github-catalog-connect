@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/external-db-client";
 import { CATEGORY_LABELS } from "@/lib/dzamp/lines";
 import { formatBRL } from "@/lib/dzamp/format";
 import { IMAGE_BUCKET, STORAGE_PREFIX } from "@/lib/dzamp/settings";

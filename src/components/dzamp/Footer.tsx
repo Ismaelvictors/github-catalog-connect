@@ -1,3 +1,5 @@
+import { Link } from "@tanstack/react-router";
+
 export function Footer() {
   return (
     <footer className="footer">
@@ -10,6 +12,9 @@ export function Footer() {
       <p className="footer-copy">
         © {new Date().getFullYear()} DZAMP. Todos os direitos reservados.
       </p>
+      <Link className="footer-owner-link" to="/login">
+        Área do proprietário
+      </Link>
     </footer>
   );
 }

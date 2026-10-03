@@ -13,7 +13,7 @@ export function Footer() {
         © {new Date().getFullYear()} DZAMP. Todos os direitos reservados.
       </p>
       <Link className="footer-owner-link" to="/login">
-        Área do administrativa
+        Área administrativa
       </Link>
     </footer>
   );

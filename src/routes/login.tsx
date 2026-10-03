@@ -2,16 +2,12 @@ import { useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { supabase } from "@/lib/external-db-client";
 
-const OWNER_EMAIL = "victors.testes.dev@gmail.com";
-
 function authMessage(message: string): string {
   if (/email provider disabled|email logins are disabled/i.test(message))
     return "O acesso por e-mail está indisponível no momento. Tente novamente mais tarde.";
   if (/email not confirmed/i.test(message)) return "Confirme seu e-mail pelo link recebido antes de entrar.";
   if (/invalid login credentials/i.test(message))
-    return "E-mail ou senha incorretos. Se ainda não criou sua conta, use Primeiro acesso.";
-  if (/user already registered/i.test(message))
-    return "Este e-mail já tem uma conta. Entre ou use Esqueci minha senha.";
+    return "E-mail ou senha incorretos. Confira seus dados ou use Esqueci minha senha.";
   if (/rate limit|too many requests/i.test(message))
     return "Muitas tentativas. Aguarde alguns minutos e tente novamente.";
   return message;
@@ -34,7 +30,7 @@ export const Route = createFileRoute("/login")({
 
 function LoginPage() {
   const navigate = useNavigate();
-  const [mode, setMode] = useState<"login" | "signup" | "reset">("login");
+  const [mode, setMode] = useState<"login" | "reset">("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -59,26 +55,6 @@ function LoginPage() {
           );
         }
         navigate({ to: "/admin", replace: true });
-      } else if (mode === "signup") {
-        if (email.trim().toLowerCase() !== OWNER_EMAIL)
-          throw new Error("Use o e-mail autorizado do lojista para criar o primeiro acesso.");
-        const { data, error } = await supabase.auth.signUp({
-          email: email.trim().toLowerCase(),
-          password,
-          options: { emailRedirectTo: `${window.location.origin}/login` },
-        });
-        if (error) throw new Error(authMessage(error.message));
-        if (data.session) {
-          const { data: isAdmin, error: roleError } = await supabase.rpc("claim_owner_admin");
-          if (roleError || !isAdmin) throw new Error("Não foi possível validar seu acesso. Tente entrar novamente.");
-          navigate({ to: "/admin", replace: true });
-          return;
-        }
-        setMsg({
-          type: "ok",
-          text: "Confira sua caixa de entrada e confirme o e-mail pelo link enviado. Depois, entre com sua senha.",
-        });
-        setMode("login");
       } else {
         const { error } = await supabase.auth.resetPasswordForEmail(email, {
           redirectTo: `${window.location.origin}/redefinir-senha`,
@@ -97,7 +73,7 @@ function LoginPage() {
     <main className="admin-login">
       <form className="admin-login-card" onSubmit={submit}>
         <img src="/images/logo.png" alt="DZAMP" className="admin-login-logo" />
-        <h1>{mode === "signup" ? "Primeiro acesso" : mode === "reset" ? "Recuperar senha" : "Painel do lojista"}</h1>
+        <h1>{mode === "reset" ? "Recuperar senha" : "Painel do lojista"}</h1>
         <label>
           E-mail
           <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" />
@@ -112,7 +88,7 @@ function LoginPage() {
                 minLength={8}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                autoComplete={mode === "signup" ? "new-password" : "current-password"}
+                autoComplete="current-password"
               />
               <button
                 type="button"
@@ -157,7 +133,7 @@ function LoginPage() {
         )}
         {msg && <p className={msg.type === "error" ? "field-error" : "admin-ok"}>{msg.text}</p>}
         <button className="btn btn-primary btn-block" disabled={busy}>
-          {busy ? "Aguarde..." : mode === "signup" ? "Criar acesso" : mode === "reset" ? "Enviar link" : "Entrar"}
+          {busy ? "Aguarde..." : mode === "reset" ? "Enviar link" : "Entrar"}
         </button>
         <div className="admin-login-links">
           {mode !== "login" && (
@@ -169,9 +145,6 @@ function LoginPage() {
             <>
               <button type="button" onClick={() => setMode("reset")}>
                 Esqueci minha senha
-              </button>
-              <button type="button" onClick={() => setMode("signup")}>
-                Primeiro acesso
               </button>
             </>
           )}

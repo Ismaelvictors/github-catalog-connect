@@ -11,3 +11,4 @@
 
 - Keep the owner claim tied to the verified email in the database and authorize admin actions with database roles; client checks are only UX gates because browser state is untrusted.
 - Place orders through the database transaction function rather than direct client writes so stock deductions and prices remain atomic.
+- Route browser and server catalog access through the owner-managed database config, because Lovable-managed environment variables are reset to the Cloud database.

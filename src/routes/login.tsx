@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/external-db-client";
 
 const OWNER_EMAIL = "victors.testes.dev@gmail.com";
 

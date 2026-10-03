@@ -5,19 +5,13 @@ import { z } from "zod";
 import type { Database } from "@/integrations/supabase/types";
 import type { Category, Product } from "@/lib/dzamp/types";
 import { IMAGE_BUCKET, parseSettings, STORAGE_PREFIX } from "@/lib/dzamp/settings";
+import { externalDbPublishableKey, externalDbUrl } from "@/lib/external-db-config";
+import { externalDbFetch } from "@/lib/external-db-client";
 
 function publicClient() {
-  const key = process.env["SUPABASE_PUBLISHABLE_KEY"]!;
-  return createClient<Database>(process.env["SUPABASE_URL"]!, key, {
+  return createClient<Database>(externalDbUrl, externalDbPublishableKey, {
     auth: { persistSession: false, autoRefreshToken: false },
-    global: {
-      fetch: (input, init) => {
-        const h = new Headers(init?.headers);
-        if (key.startsWith("sb_") && h.get("Authorization") === `Bearer ${key}`) h.delete("Authorization");
-        h.set("apikey", key);
-        return fetch(input, { ...init, headers: h });
-      },
-    },
+    global: { fetch: externalDbFetch },
   });
 }
 

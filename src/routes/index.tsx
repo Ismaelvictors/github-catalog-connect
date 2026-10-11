@@ -10,7 +10,7 @@ import type { Product } from "@/lib/dzamp/types";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "DZAMP — Moda com identidade para todas as idades" },
+      { title: "DZAMP" },
       {
         name: "description",
         content:

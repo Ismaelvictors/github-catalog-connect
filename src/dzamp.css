@@ -1925,7 +1925,8 @@ h2 {
   }
 
   .hc-slide {
-    aspect-ratio: 4 / 3;
+    /* Keep the saved editor crop (16:10) intact on mobile too. */
+    aspect-ratio: 16 / 10;
     max-height: 300px;
   }
 

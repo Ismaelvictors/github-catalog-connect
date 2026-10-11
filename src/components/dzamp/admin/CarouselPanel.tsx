@@ -13,6 +13,8 @@ export function CarouselPanel({ onSaved }: { onSaved: () => void }) {
   const frames = useRef<(HTMLDivElement | null)[]>([]);
   const images = useRef<(HTMLImageElement | null)[]>([]);
   const drags = useRef<( { x: number; y: number; cropX: number; cropY: number } | null)[]>([]);
+  const slidesRef = useRef(slides);
+  slidesRef.current = slides;
 
   useEffect(() => {
     let alive = true;
@@ -36,7 +38,7 @@ export function CarouselPanel({ onSaved }: { onSaved: () => void }) {
     return () => { alive = false; };
   }, []);
 
-  useEffect(() => () => { slides.forEach((slide) => { if (slide.preview) URL.revokeObjectURL(slide.preview); }); }, [slides]);
+  useEffect(() => () => { slidesRef.current.forEach((slide) => { if (slide.preview) URL.revokeObjectURL(slide.preview); }); }, []);
 
   const update = (index: number, updater: (slide: Slide) => Slide) => setSlides((all) => all.map((slide, i) => i === index ? updater(slide) : slide));
   const cropFile = async (slide: Slide, index: number) => {
@@ -82,9 +84,14 @@ export function CarouselPanel({ onSaved }: { onSaved: () => void }) {
       }
       const { error } = await supabase.from("settings").upsert({ key: CAROUSEL_SETTING_KEY, value: JSON.stringify(values), updated_at: new Date().toISOString() }, { onConflict: "key" });
       if (error) throw new Error("Não foi possível salvar o carrossel.");
+      const savedPaths = values.filter((value) => value.startsWith(STORAGE_PREFIX)).map((value) => value.slice(STORAGE_PREFIX.length));
+      const { data: savedUrls } = savedPaths.length
+        ? await supabase.storage.from(IMAGE_BUCKET).createSignedUrls(savedPaths, 3600)
+        : { data: [] };
+      const signed = new Map((savedUrls ?? []).flatMap((item) => item.path && item.signedUrl ? [[item.path, item.signedUrl] as const] : []));
       const oldPaths = slides.map((slide) => slide.raw).filter((value) => value.startsWith(STORAGE_PREFIX) && !values.includes(value)).map((value) => value.slice(STORAGE_PREFIX.length));
       if (oldPaths.length) await supabase.storage.from(IMAGE_BUCKET).remove(oldPaths);
-      setSlides(values.map((value, i) => makeSlide(value, slides[i].url)));
+      setSlides(values.map((value, i) => makeSlide(value, value.startsWith(STORAGE_PREFIX) ? signed.get(value.slice(STORAGE_PREFIX.length)) ?? slides[i].url : value)));
       setMessage({ error: false, text: "Imagens do carrossel salvas!" });
       onSaved();
     } catch (e) {

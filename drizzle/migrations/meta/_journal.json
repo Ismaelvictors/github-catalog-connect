@@ -36,6 +36,13 @@
       "when": 1790908483865,
       "tag": "0004_return_order_items_for_whatsapp",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1791727200000,
+      "tag": "0005_featured_products",
+      "breakpoints": true
     }
   ]
 }

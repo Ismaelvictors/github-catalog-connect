@@ -128,6 +128,8 @@ export type Database = {
           description: string
           id: string
           images: Json
+          is_featured: boolean
+          featured_order: number
           is_active: boolean
           price: number
           sizes: Json
@@ -142,6 +144,8 @@ export type Database = {
           description?: string
           id?: string
           images?: Json
+          is_featured?: boolean
+          featured_order?: number
           is_active?: boolean
           price: number
           sizes?: Json
@@ -156,6 +160,8 @@ export type Database = {
           description?: string
           id?: string
           images?: Json
+          is_featured?: boolean
+          featured_order?: number
           is_active?: boolean
           price?: number
           sizes?: Json

@@ -8,6 +8,10 @@ import { IMAGE_BUCKET, STORAGE_PREFIX } from "@/lib/dzamp/settings";
 import type { Category } from "@/lib/dzamp/types";
 import { ProductForm, type AdminProduct } from "@/components/dzamp/admin/ProductForm";
 import { SettingsPanel } from "@/components/dzamp/admin/SettingsPanel";
+import { CarouselPanel } from "@/components/dzamp/admin/CarouselPanel";
+import { FeaturedProductsPanel } from "@/components/dzamp/admin/FeaturedProductsPanel";
+import { ContactsPanel } from "@/components/dzamp/admin/ContactsPanel";
+import { ContactRound, Film, Package, Settings, Star } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/admin")({
   head: () => ({
@@ -30,7 +34,7 @@ async function fetchAdminProducts(): Promise<AdminProduct[]> {
   const [p, s] = await Promise.all([
     supabase
       .from("products")
-      .select("id,title,description,price,wholesale_price,category,images,is_active,sort_order,created_at")
+      .select("id,title,description,price,wholesale_price,category,images,is_active,sort_order,created_at,is_featured,featured_order")
       .order("sort_order")
       .order("created_at", { ascending: false }),
     supabase.from("product_stock").select("product_id,size,quantity,sort_order").order("sort_order"),
@@ -57,6 +61,8 @@ async function fetchAdminProducts(): Promise<AdminProduct[]> {
       wholesalePrice: Number(r.wholesale_price),
       category: r.category as Category,
       isActive: r.is_active,
+      isFeatured: r.is_featured,
+      featuredOrder: r.featured_order,
       imageRaw: first,
       imageUrl: first.startsWith(STORAGE_PREFIX) ? (signed.get(first.slice(STORAGE_PREFIX.length)) ?? "") : first,
       stock: (s.data ?? []).filter((x) => x.product_id === r.id).map((x) => ({ size: x.size, quantity: x.quantity })),
@@ -74,7 +80,7 @@ function AdminPage() {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const [authorized, setAuthorized] = useState<boolean | null>(null);
-  const [tab, setTab] = useState<"produtos" | "config">("produtos");
+  const [tab, setTab] = useState<"produtos" | "destaques" | "config" | "contatos" | "carrossel">("produtos");
   const [editing, setEditing] = useState<AdminProduct | "new" | null>(null);
   const [search, setSearch] = useState("");
   const [cat, setCat] = useState<Category | "all">("all");
@@ -154,13 +160,36 @@ function AdminPage() {
         </div>
       </header>
 
-      <nav className="admin-tabs">
-        <button className={tab === "produtos" ? "active" : ""} onClick={() => setTab("produtos")}>Produtos</button>
-        <button className={tab === "config" ? "active" : ""} onClick={() => setTab("config")}>Configurações</button>
-      </nav>
-
-      {tab === "config" ? (
+      <div className="admin-layout">
+        <nav className="admin-tabs" aria-label="Navegação do painel">
+          <button className={tab === "produtos" ? "active" : ""} onClick={() => setTab("produtos")} aria-current={tab === "produtos" ? "page" : undefined}>
+            <Package size={18} aria-hidden="true" /><span>Produtos</span>
+          </button>
+          <button className={tab === "destaques" ? "active" : ""} onClick={() => setTab("destaques")} aria-current={tab === "destaques" ? "page" : undefined}>
+            <Star size={18} aria-hidden="true" /><span>Destaques</span>
+          </button>
+          <button className={tab === "config" ? "active" : ""} onClick={() => setTab("config")} aria-current={tab === "config" ? "page" : undefined}>
+            <Settings size={18} aria-hidden="true" /><span>Configurações</span>
+          </button>
+          <button className={tab === "contatos" ? "active" : ""} onClick={() => setTab("contatos")} aria-current={tab === "contatos" ? "page" : undefined}>
+            <ContactRound size={18} aria-hidden="true" /><span>Contatos</span>
+          </button>
+          <button className={tab === "carrossel" ? "active" : ""} onClick={() => setTab("carrossel")} aria-current={tab === "carrossel" ? "page" : undefined}>
+            <Film size={18} aria-hidden="true" /><span>Carrossel</span>
+          </button>
+        </nav>
+        <section className="admin-main-content">
+      {tab === "carrossel" ? (
+        <CarouselPanel onSaved={() => qc.invalidateQueries({ queryKey: ["catalog"] })} />
+      ) : tab === "destaques" ? (
+        <FeaturedProductsPanel />
+      ) : tab === "config" ? (
         <SettingsPanel onSaved={() => qc.invalidateQueries({ queryKey: ["catalog"] })} />
+      ) : tab === "contatos" ? (
+        <ContactsPanel onSaved={() => {
+          qc.invalidateQueries({ queryKey: ["catalog"] });
+          qc.invalidateQueries({ queryKey: ["store-contacts"] });
+        }} />
       ) : (
         <>
           {(outCount > 0 || lowCount > 0) && (
@@ -219,9 +248,9 @@ function AdminPage() {
                         )}
                       </div>
                       <div className="admin-item-actions">
-                        <button onClick={() => setEditing(p)}>Editar</button>
-                        <button onClick={() => toggleActive(p)}>{p.isActive ? "Ocultar" : "Mostrar"}</button>
-                        <button className="danger" onClick={() => setConfirmDelete(p)}>Excluir</button>
+                        <button className="btn" onClick={() => setEditing(p)}>Editar</button>
+                        <button className="btn" onClick={() => toggleActive(p)}>{p.isActive ? "Ocultar" : "Mostrar"}</button>
+                        <button className="btn danger" onClick={() => setConfirmDelete(p)}>Excluir</button>
                       </div>
                     </div>
                   </article>
@@ -250,11 +279,13 @@ function AdminPage() {
             <p>“{confirmDelete.title}” será removido definitivamente, junto com seu estoque.</p>
             <div className="admin-confirm-actions">
               <button className="btn" onClick={() => setConfirmDelete(null)}>Cancelar</button>
-              <button className="btn btn-primary" onClick={doDelete}>Excluir</button>
+              <button className="btn" onClick={doDelete}>Excluir</button>
             </div>
           </div>
         </div>
       )}
+        </section>
+      </div>
     </main>
   );
 }

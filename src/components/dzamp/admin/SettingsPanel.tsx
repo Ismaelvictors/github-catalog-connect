@@ -2,9 +2,11 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/lib/external-db-client";
 import { parseSettings, SETTING_KEYS } from "@/lib/dzamp/settings";
 import type { StoreSettings } from "@/lib/dzamp/types";
+import { currencyInputToNumber, formatCurrencyInput, formatCurrencyValue } from "@/lib/dzamp/input-masks";
 
 export function SettingsPanel({ onSaved }: { onSaved: () => void }) {
   const [s, setS] = useState<StoreSettings | null>(null);
+  const [minOrderInput, setMinOrderInput] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ type: "ok" | "error"; text: string } | null>(null);
 
@@ -20,12 +22,11 @@ export function SettingsPanel({ onSaved }: { onSaved: () => void }) {
     setMsg(null);
     if (!(s.minOrderValue >= 0) || !(s.wholesaleMinTraditional >= 1) || !(s.wholesaleMinUv >= 1))
       return setMsg({ type: "error", text: "Verifique os valores informados." });
-    const phone = s.whatsappNumber.replace(/\D/g, "");
-    if (phone.length < 10) return setMsg({ type: "error", text: "Informe o WhatsApp com DDI e DDD (ex.: 5511999999999)." });
     setBusy(true);
-    const rows = (Object.keys(SETTING_KEYS) as (keyof StoreSettings)[]).map((k) => ({
+    const configKeys: (keyof StoreSettings)[] = ["minOrderEnabled", "minOrderValue", "wholesaleEnabled", "wholesaleMinTraditional", "wholesaleMinUv"];
+    const rows = configKeys.map((k) => ({
       key: SETTING_KEYS[k],
-      value: k === "whatsappNumber" ? phone : String(s[k]),
+      value: String(s[k]),
       updated_at: new Date().toISOString(),
     }));
     const { error } = await supabase.from("settings").upsert(rows, { onConflict: "key" });
@@ -41,17 +42,19 @@ export function SettingsPanel({ onSaved }: { onSaved: () => void }) {
         <h3>Pedido mínimo</h3>
         <label className="admin-toggle">
           <input type="checkbox" checked={s.minOrderEnabled} onChange={(e) => set("minOrderEnabled", e.target.checked)} />
-          Exigir valor mínimo de pedido
+          <span>Exigir valor mínimo de pedido</span>
         </label>
         <label>
           Valor mínimo (R$)
           <input
-            type="number"
+            type="text"
             inputMode="decimal"
-            min={0}
-            step="0.01"
-            value={s.minOrderValue}
-            onChange={(e) => set("minOrderValue", Number(e.target.value))}
+            value={minOrderInput ?? formatCurrencyValue(s.minOrderValue)}
+            onChange={(e) => {
+              const formatted = formatCurrencyInput(e.target.value);
+              setMinOrderInput(formatted);
+              set("minOrderValue", currencyInputToNumber(formatted));
+            }}
           />
         </label>
       </div>
@@ -60,7 +63,7 @@ export function SettingsPanel({ onSaved }: { onSaved: () => void }) {
         <h3>Preço de atacado</h3>
         <label className="admin-toggle">
           <input type="checkbox" checked={s.wholesaleEnabled} onChange={(e) => set("wholesaleEnabled", e.target.checked)} />
-          Ativar preço de atacado
+          <span>Ativar preço de atacado</span>
         </label>
         <label>
           Peças para atacado — Infantil + Jovem + Adulto (somadas)
@@ -68,6 +71,8 @@ export function SettingsPanel({ onSaved }: { onSaved: () => void }) {
             type="number"
             inputMode="numeric"
             min={1}
+            step={1}
+            onKeyDown={(e) => { if (["e", "E", "+", "-", ".", ","].includes(e.key)) e.preventDefault(); }}
             value={s.wholesaleMinTraditional}
             onChange={(e) => set("wholesaleMinTraditional", Number(e.target.value))}
           />
@@ -78,17 +83,11 @@ export function SettingsPanel({ onSaved }: { onSaved: () => void }) {
             type="number"
             inputMode="numeric"
             min={1}
+            step={1}
+            onKeyDown={(e) => { if (["e", "E", "+", "-", ".", ","].includes(e.key)) e.preventDefault(); }}
             value={s.wholesaleMinUv}
             onChange={(e) => set("wholesaleMinUv", Number(e.target.value))}
           />
-        </label>
-      </div>
-
-      <div className="admin-card">
-        <h3>WhatsApp da loja</h3>
-        <label>
-          Número com DDI e DDD
-          <input inputMode="tel" value={s.whatsappNumber} onChange={(e) => set("whatsappNumber", e.target.value)} />
         </label>
       </div>
 

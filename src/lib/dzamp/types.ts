@@ -14,10 +14,14 @@ export interface Product {
   category: Category;
   images: string[];
   stock: StockEntry[];
+  isFeatured: boolean;
+  featuredOrder: number;
 }
 
 export interface StoreSettings {
   whatsappNumber: string;
+  instagramHandle: string;
+  contactEmail: string;
   minOrderEnabled: boolean;
   minOrderValue: number;
   wholesaleEnabled: boolean;

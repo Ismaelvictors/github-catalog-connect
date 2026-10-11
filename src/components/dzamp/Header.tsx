@@ -20,14 +20,14 @@ export function Header() {
           <Link to="/" className="header-logo" aria-label="DZAMP — página inicial">
             <img src="/images/logo.png" alt="DZAMP" />
           </Link>
-          <nav className="header-nav">
-            {LINKS.map((l) => (
-              <Link key={l.to} to={l.to} className={pathname === l.to ? "active" : ""}>
-                {l.label}
-              </Link>
-            ))}
-          </nav>
         </div>
+        <nav className="header-nav" aria-label="Navegação principal">
+          {LINKS.map((l) => (
+            <Link key={l.to} to={l.to} className={pathname === l.to ? "active" : ""} aria-current={pathname === l.to ? "page" : undefined}>
+              {l.label}
+            </Link>
+          ))}
+        </nav>
         <div className="header-actions">
           <button className="sacola-btn" onClick={() => setOpen(true)} aria-label="Abrir sacola">
             <svg

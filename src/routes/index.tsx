@@ -7,13 +7,6 @@ import { ProductModal } from "@/components/dzamp/ProductModal";
 import { useCart } from "@/components/dzamp/cart";
 import type { Product } from "@/lib/dzamp/types";
 
-const SLIDES = [
-  "/images/carousel/carousel-1.jpg",
-  "/images/carousel/carousel-2.jpg",
-  "/images/carousel/carousel-3.jpg",
-  "/images/carousel/carousel-4.jpg",
-];
-
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
@@ -38,16 +31,19 @@ export const Route = createFileRoute("/")({
 
 function HomePage() {
   const { data } = useSuspenseQuery(catalogQueryOptions);
+  const slides = data.carouselImages;
   const { add } = useCart();
   const [slide, setSlide] = useState(0);
   const [selected, setSelected] = useState<Product | null>(null);
 
   useEffect(() => {
-    const id = window.setInterval(() => setSlide((s) => (s + 1) % SLIDES.length), 4000);
+    const id = window.setInterval(() => setSlide((s) => (s + 1) % slides.length), 4000);
     return () => window.clearInterval(id);
-  }, []);
+  }, [slides.length]);
 
-  const featured = data.products.slice(0, 4);
+  const featured = data.products
+    .filter((product) => product.isFeatured)
+    .sort((a, b) => a.featuredOrder - b.featuredOrder);
 
   return (
     <main className="page">
@@ -70,14 +66,14 @@ function HomePage() {
         <div className="hero-carousel-wrap">
           <div className="hero-carousel">
             <div className="hc-track" style={{ transform: `translateX(-${slide * 100}%)` }}>
-              {SLIDES.map((src) => (
+              {slides.map((src) => (
                 <div className="hc-slide" key={src}>
                   <img src={src} alt="Peças da coleção DZAMP" />
                 </div>
               ))}
             </div>
             <div className="hc-dots">
-              {SLIDES.map((src, i) => (
+              {slides.map((src, i) => (
                 <button
                   key={src}
                   className={`hc-dot ${i === slide ? "hc-dot-active" : ""}`}
@@ -90,25 +86,27 @@ function HomePage() {
         </div>
       </section>
 
-      <section className="section home-featured">
-        <div className="section-head">
-          <h2>Destaques DZAMP</h2>
-          <Link to="/catalogo" className="see-all">
-            Ver todos →
-          </Link>
-        </div>
-        <div className="grid">
-          {featured.map((p) => (
-            <ProductCard
-              key={p.id}
-              product={p}
-              onDetails={() => setSelected(p)}
-              settings={data.settings}
+      {featured.length > 0 && (
+        <section className="section home-featured">
+          <div className="section-head">
+            <h2>Destaques DZAMP</h2>
+            <Link to="/catalogo" className="see-all">
+              Ver todos →
+            </Link>
+          </div>
+          <div className="grid featured-grid">
+            {featured.map((p) => (
+              <ProductCard
+                key={p.id}
+                product={p}
+                onDetails={() => setSelected(p)}
+                settings={data.settings}
                 onAdd={(item) => add(item)}
-            />
-          ))}
-        </div>
-      </section>
+              />
+            ))}
+          </div>
+        </section>
+      )}
 
       {selected && (
         <ProductModal product={selected} settings={data.settings} onClose={() => setSelected(null)} onAdd={(i) => add(i)} />

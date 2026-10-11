@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { CATEGORY_LABELS } from "@/lib/dzamp/lines";
 import { formatBRL } from "@/lib/dzamp/format";
 import type { CartItem, Product, StoreSettings } from "@/lib/dzamp/types";
 import { firstAvailableIfSingle, isSoldOut, QtyStepper, SizeSelect, WholesaleHint } from "./product-controls";
@@ -47,7 +46,6 @@ export function ProductCard({
     <article className={`card ${soldOut ? "card-soldout" : ""}`}>
       <button className="card-media" onClick={onDetails} aria-label={`Ver detalhes de ${product.title}`}>
         <img src={product.images[0] ?? ""} alt={product.title} loading="lazy" />
-        <span className={`cat-tag cat-${product.category}`}>{CATEGORY_LABELS[product.category]}</span>
         {soldOut && <span className="soldout-badge">Esgotado</span>}
       </button>
       <div className="card-body">

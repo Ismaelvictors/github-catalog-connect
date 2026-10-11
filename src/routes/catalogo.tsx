@@ -1,13 +1,16 @@
 import { useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useSuspenseQuery } from "@tanstack/react-query";
-import { Filter } from "lucide-react";
+import { Filter, Search } from "lucide-react";
 import { catalogQueryOptions } from "@/lib/catalog.functions";
 import { CategoryChips } from "@/components/dzamp/product-controls";
 import { ProductCard } from "@/components/dzamp/ProductCard";
 import { ProductModal } from "@/components/dzamp/ProductModal";
 import { useCart } from "@/components/dzamp/cart";
+import { CATEGORY_LABELS } from "@/lib/dzamp/lines";
 import type { Category, Product } from "@/lib/dzamp/types";
+
+const CATALOG_CATEGORIES: Category[] = ["jovem", "infantil", "adulto", "uv"];
 
 export const Route = createFileRoute("/catalogo")({
   head: () => ({
@@ -49,6 +52,16 @@ function CatalogPage() {
     });
   }, [data.products, category, search]);
 
+  const productSections = useMemo(() => {
+    if (category !== "all") return [{ category, products }];
+    return CATALOG_CATEGORIES
+      .map((sectionCategory) => ({
+        category: sectionCategory,
+        products: products.filter((product) => product.category === sectionCategory),
+      }))
+      .filter((section) => section.products.length > 0);
+  }, [category, products]);
+
   return (
     <main className="page">
       <section className="section">
@@ -57,21 +70,24 @@ function CatalogPage() {
         </div>
 
         <div className="catalog-toolbar">
-          <input
-            className="search-input"
-            type="search"
-            placeholder="Buscar produto..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            aria-label="Buscar produto"
-          />
+          <div className="search-field">
+            <Search size={18} strokeWidth={2} aria-hidden="true" />
+            <input
+              className="search-input"
+              type="search"
+              placeholder="Buscar produto..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              aria-label="Buscar produto"
+            />
+          </div>
           <button
             className={`filters-toggle ${filtersOpen ? "filters-toggle-open" : ""}`}
             onClick={() => setFiltersOpen((o) => !o)}
             aria-expanded={filtersOpen}
           >
             <Filter size={16} strokeWidth={2.4} aria-hidden="true" />
-            Filtros
+            Filtros avançados
           </button>
         </div>
 
@@ -84,15 +100,22 @@ function CatalogPage() {
         {products.length === 0 ? (
           <p className="empty-state">Nenhum produto encontrado para esta busca.</p>
         ) : (
-          <div className="grid">
-            {products.map((p) => (
-              <ProductCard
-                key={p.id}
-                product={p}
-                onDetails={() => setSelected(p)}
-                settings={data.settings}
-                onAdd={(item) => add(item)}
-              />
+          <div className="catalog-sections">
+            {productSections.map((section) => (
+              <section className="catalog-category-section" key={section.category}>
+                <h2>{CATEGORY_LABELS[section.category]}</h2>
+                <div className="grid">
+                  {section.products.map((p) => (
+                    <ProductCard
+                      key={p.id}
+                      product={p}
+                      onDetails={() => setSelected(p)}
+                      settings={data.settings}
+                      onAdd={(item) => add(item)}
+                    />
+                  ))}
+                </div>
+              </section>
             ))}
           </div>
         )}

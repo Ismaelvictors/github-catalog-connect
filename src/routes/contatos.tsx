@@ -1,4 +1,27 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
+import { Instagram, Mail, MessageCircle } from "lucide-react";
+import { supabase } from "@/lib/external-db-client";
+import { DEFAULT_SETTINGS, SETTING_KEYS } from "@/lib/dzamp/settings";
+
+const contactsQueryOptions = {
+  queryKey: ["store-contacts"],
+  queryFn: async () => {
+    const { data, error } = await supabase.from("settings").select("key,value").in("key", [
+      SETTING_KEYS.whatsappNumber,
+      SETTING_KEYS.instagramHandle,
+      SETTING_KEYS.contactEmail,
+    ]);
+    if (error) throw error;
+    const values = new Map((data ?? []).map((row) => [row.key, row.value]));
+    return {
+      whatsappNumber: values.get(SETTING_KEYS.whatsappNumber) || DEFAULT_SETTINGS.whatsappNumber,
+      instagramHandle: values.get(SETTING_KEYS.instagramHandle) || DEFAULT_SETTINGS.instagramHandle,
+      contactEmail: values.get(SETTING_KEYS.contactEmail) || DEFAULT_SETTINGS.contactEmail,
+    };
+  },
+  staleTime: 30_000,
+};
 
 export const Route = createFileRoute("/contatos")({
   head: () => ({
@@ -22,39 +45,41 @@ export const Route = createFileRoute("/contatos")({
 });
 
 function ContactsPage() {
+  const { data: contacts = DEFAULT_SETTINGS } = useQuery(contactsQueryOptions);
+  const phoneDigits = contacts.whatsappNumber.replace(/\D/g, "");
+  const whatsappUrl = `https://wa.me/${phoneDigits}`;
+  const instagramHandle = contacts.instagramHandle.replace(/^@/, "");
+  const instagramLabel = `@${instagramHandle}`;
+
   return (
     <main className="page">
-      <section className="section">
+      <section className="section contacts-section">
         <div className="section-head">
           <h1>Contatos</h1>
-          <p className="muted">
-            Estamos por aqui para ajudar com tamanhos, estampas, prazos e entrega.
-          </p>
         </div>
 
         <div className="contact-grid">
           <div className="contact-card">
             <h3>Atendimento</h3>
-            <p className="muted">Segunda a sábado, das 9h às 18h.</p>
-            <ul className="contact-list">
-              <li>
-                <strong>WhatsApp</strong>
-                <span className="muted">Pedidos e dúvidas rápidas</span>
-              </li>
-              <li>
-                <strong>Instagram</strong>
-                <span className="muted">@dzamp</span>
-              </li>
-              <li>
-                <strong>E-mail</strong>
-                <span className="muted">contato@dzamp.com.br</span>
-              </li>
-            </ul>
+            <div className="contact-icon-links" aria-label="Canais de contato">
+              <a className="contact-method" href={whatsappUrl} target="_blank" rel="noopener noreferrer" aria-label={`Fale com a DZAMP pelo WhatsApp: ${contacts.whatsappNumber}`}>
+                <MessageCircle size={24} aria-hidden="true" />
+                <span><strong>WhatsApp</strong><small>{contacts.whatsappNumber}</small></span>
+              </a>
+              <a className="contact-method" href={`https://www.instagram.com/${encodeURIComponent(instagramHandle)}/`} target="_blank" rel="noopener noreferrer" aria-label={`Instagram da DZAMP: ${instagramLabel}`}>
+                <Instagram size={24} aria-hidden="true" />
+                <span><strong>Instagram</strong><small>{instagramLabel}</small></span>
+              </a>
+              <a className="contact-method" href={`mailto:${contacts.contactEmail}`} aria-label={`Enviar e-mail para ${contacts.contactEmail}`}>
+                <Mail size={24} aria-hidden="true" />
+                <span><strong>E-mail</strong><small>{contacts.contactEmail}</small></span>
+              </a>
+            </div>
           </div>
 
           <form
             className="contact-form"
-            action="https://formsubmit.co/contato@dzamp.com.br"
+            action={`https://formsubmit.co/${encodeURIComponent(contacts.contactEmail)}`}
             method="POST"
           >
             <h3>Envie uma mensagem</h3>

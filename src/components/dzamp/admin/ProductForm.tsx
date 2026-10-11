@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/lib/external-db-client";
 import { CATEGORY_LABELS, LINE_CONFIG } from "@/lib/dzamp/lines";
 import { IMAGE_BUCKET, STORAGE_PREFIX } from "@/lib/dzamp/settings";
+import { formatCurrencyInput, formatCurrencyValue } from "@/lib/dzamp/input-masks";
 import type { Category, StockEntry } from "@/lib/dzamp/types";
 
 export interface AdminProduct {
@@ -12,6 +13,8 @@ export interface AdminProduct {
   wholesalePrice: number;
   category: Category;
   isActive: boolean;
+  isFeatured: boolean;
+  featuredOrder: number;
   imageRaw: string;
   imageUrl: string;
   stock: StockEntry[];
@@ -25,10 +28,10 @@ const SIZE_PRESETS: Record<Category, string[]> = {
 };
 
 function parseMoney(v: string): number {
-  const n = Number(v.replace(/\./g, "").replace(",", "."));
+  const n = Number(v.replace(/[^\d,.-]/g, "").replace(/\./g, "").replace(",", "."));
   return Number.isFinite(n) ? n : NaN;
 }
-const money = (n: number) => (Number.isFinite(n) ? n.toFixed(2).replace(".", ",") : "");
+const money = (n: number) => formatCurrencyValue(n);
 
 export function ProductForm({
   product,
@@ -49,9 +52,59 @@ export function ProductForm({
   );
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState(product?.imageUrl ?? "");
+  const [imageRemoved, setImageRemoved] = useState(false);
+  const [filePreview, setFilePreview] = useState("");
+  const [cropZoom, setCropZoom] = useState(1);
+  const [cropX, setCropX] = useState(50);
+  const [cropY, setCropY] = useState(50);
+  const [cropReady, setCropReady] = useState(false);
+  const cropImage = useRef<HTMLImageElement>(null);
+  const cropFrame = useRef<HTMLDivElement>(null);
+  const dragOrigin = useRef<{ x: number; y: number; cropX: number; cropY: number } | null>(null);
   const [newSize, setNewSize] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => () => {
+    if (filePreview) URL.revokeObjectURL(filePreview);
+  }, [filePreview]);
+
+  const createCroppedFile = async (): Promise<File | null> => {
+    const img = cropImage.current;
+    if (!file || !img || !cropReady) return file;
+    // Square output matches the requested product catalog crop.
+    const widthOut = 1200;
+    const heightOut = 1200;
+    const canvas = document.createElement("canvas");
+    canvas.width = widthOut;
+    canvas.height = heightOut;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) throw new Error("Não foi possível preparar o corte da foto.");
+    const scale = Math.max(widthOut / img.naturalWidth, heightOut / img.naturalHeight) * cropZoom;
+    const width = img.naturalWidth * scale;
+    const height = img.naturalHeight * scale;
+    const left = (widthOut - width) * (cropX / 100);
+    const top = (heightOut - height) * (cropY / 100);
+    ctx.drawImage(img, left, top, width, height);
+    const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.9));
+    if (!blob) throw new Error("Não foi possível gerar a foto cortada.");
+    return new File([blob], `${file.name.replace(/\.[^.]+$/, "")}-corte.jpg`, { type: "image/jpeg" });
+  };
+
+  const startCropDrag = (event: React.PointerEvent<HTMLLabelElement>) => {
+    if (!file || (event.target as HTMLElement).closest("input")) return;
+    event.preventDefault();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    dragOrigin.current = { x: event.clientX, y: event.clientY, cropX, cropY };
+  };
+
+  const moveCropDrag = (event: React.PointerEvent<HTMLLabelElement>) => {
+    if (!dragOrigin.current || !cropFrame.current) return;
+    const rect = cropFrame.current.getBoundingClientRect();
+    const range = 100 / cropZoom;
+    setCropX(Math.max(0, Math.min(100, dragOrigin.current.cropX - ((event.clientX - dragOrigin.current.x) / rect.width) * range)));
+    setCropY(Math.max(0, Math.min(100, dragOrigin.current.cropY - ((event.clientY - dragOrigin.current.y) / rect.height) * range)));
+  };
 
   const onCategory = (c: Category) => {
     setCategory(c);
@@ -74,15 +127,17 @@ export function ProductForm({
     if (!(p > 0)) return setError("Informe um preço normal válido.");
     if (!(w > 0) || w > p) return setError("O preço de atacado deve ser maior que zero e não maior que o preço normal.");
     if (!stock.length) return setError("Cadastre ao menos um tamanho.");
-    if (!file && !product?.imageRaw) return setError("Adicione uma foto do produto.");
+    if (!file && (!product?.imageRaw || imageRemoved)) return setError("Adicione uma foto do produto.");
 
     setBusy(true);
     try {
-      let image = product?.imageRaw ?? "";
+      let image = imageRemoved ? "" : product?.imageRaw ?? "";
       if (file) {
-        const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
+        const croppedFile = await createCroppedFile();
+        if (!croppedFile) throw new Error("Selecione uma foto para continuar.");
+        const ext = croppedFile.name.split(".").pop()?.toLowerCase() || "jpg";
         const path = `${crypto.randomUUID()}.${ext}`;
-        const up = await supabase.storage.from(IMAGE_BUCKET).upload(path, file, { contentType: file.type });
+        const up = await supabase.storage.from(IMAGE_BUCKET).upload(path, croppedFile, { contentType: croppedFile.type });
         if (up.error) throw new Error("Falha ao enviar a foto.");
         image = STORAGE_PREFIX + path;
       }
@@ -116,7 +171,7 @@ export function ProductForm({
         { onConflict: "product_id,size" },
       );
       if (up.error) throw up.error;
-      if (file && product?.imageRaw.startsWith(STORAGE_PREFIX))
+      if ((file || imageRemoved) && product?.imageRaw.startsWith(STORAGE_PREFIX))
         await supabase.storage.from(IMAGE_BUCKET).remove([product.imageRaw.slice(STORAGE_PREFIX.length)]);
       onSaved();
     } catch (e) {
@@ -135,9 +190,41 @@ export function ProductForm({
         </div>
 
         <div className="admin-form-body">
-          <label className="admin-photo">
-            {preview ? <img src={preview} alt="" /> : <span>Toque para adicionar foto</span>}
+          <div className="admin-photo-wrap">
+            <div
+              ref={cropFrame}
+              className={`admin-photo${file ? " is-cropping" : ""}`}
+              onPointerDown={startCropDrag}
+              onPointerMove={moveCropDrag}
+              onPointerUp={() => { dragOrigin.current = null; }}
+              onPointerCancel={() => { dragOrigin.current = null; }}
+            >
+              {preview ? (
+                <>
+                  <img
+                    ref={cropImage}
+                    src={preview}
+                    alt="Prévia do corte da foto"
+                    onLoad={() => setCropReady(true)}
+                    style={file && cropImage.current ? (() => {
+                      const aspect = cropImage.current!.naturalWidth / cropImage.current!.naturalHeight;
+                      const imageWidth = Math.max(100, (aspect > 1 ? aspect : 1) * cropZoom * 100);
+                      const imageHeight = Math.max(100, (1 / aspect > 1 ? 1 / aspect : 1) * cropZoom * 100);
+                      return {
+                        width: `${imageWidth}%`,
+                        height: `${imageHeight}%`,
+                        left: `calc((100% - ${imageWidth}%) * ${cropX / 100})`,
+                        top: `calc((100% - ${imageHeight}%) * ${cropY / 100})`,
+                      };
+                    })() : undefined}
+                  />
+                </>
+              ) : <span>Escolha uma foto para começar</span>}
+              {file && <span className="admin-crop-hint">Arraste para ajustar</span>}
+            </div>
             <input
+              className="admin-photo-input"
+              id="admin-product-image"
               type="file"
               accept="image/*"
               onChange={(e) => {
@@ -145,10 +232,44 @@ export function ProductForm({
                 if (!f) return;
                 if (f.size > 10 * 1024 * 1024) return setError("A foto deve ter no máximo 10 MB.");
                 setFile(f);
-                setPreview(URL.createObjectURL(f));
+                setCropReady(false);
+                setCropZoom(1);
+                setCropX(50);
+                setCropY(50);
+                const nextPreview = URL.createObjectURL(f);
+                setFilePreview(nextPreview);
+                setPreview(nextPreview);
+                setError(null);
               }}
             />
-          </label>
+            <div className="carousel-editor-actions admin-photo-actions">
+              <label className="btn">{file || preview ? "Substituir imagem" : "Adicionar imagem"}<input
+                type="file" accept="image/*" onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (!f) return;
+                  if (f.size > 10 * 1024 * 1024) { setError("A foto deve ter no máximo 10 MB."); e.currentTarget.value = ""; return; }
+                  setFile(f); setImageRemoved(false); setCropReady(false); setCropZoom(1); setCropX(50); setCropY(50);
+                  const nextPreview = URL.createObjectURL(f);
+                  setFilePreview(nextPreview); setPreview(nextPreview); setError(null); e.currentTarget.value = "";
+                }}
+              /></label>
+              {preview && <button className="btn" type="button" onClick={() => {
+                setFile(null); setPreview(""); setImageRemoved(true); setCropReady(false);
+                if (filePreview) URL.revokeObjectURL(filePreview);
+                setFilePreview(""); setError(null);
+              }}>Remover</button>}
+            </div>
+            {file && (
+              <div className="admin-crop-controls">
+                <span>Arraste a imagem para ajustar</span>
+                <div className="admin-crop-zoom">
+                  <button type="button" aria-label="Diminuir zoom" onClick={() => setCropZoom((zoom) => Math.max(1, +(zoom - 0.1).toFixed(2)))}>−</button>
+                  <input aria-label="Zoom do corte" type="range" min="1" max="3" step="0.01" value={cropZoom} onChange={(e) => setCropZoom(Number(e.target.value))} />
+                  <button type="button" aria-label="Aumentar zoom" onClick={() => setCropZoom((zoom) => Math.min(3, +(zoom + 0.1).toFixed(2)))}>+</button>
+                </div>
+              </div>
+            )}
+          </div>
 
           <label>
             Nome do produto (com a cor)
@@ -167,11 +288,11 @@ export function ProductForm({
           <div className="admin-row2">
             <label>
               Preço normal (R$)
-              <input inputMode="decimal" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="20,00" />
+              <input inputMode="decimal" value={price} onChange={(e) => setPrice(formatCurrencyInput(e.target.value))} placeholder="R$ 20,00" />
             </label>
             <label>
               Preço atacado (R$)
-              <input inputMode="decimal" value={wholesale} onChange={(e) => setWholesale(e.target.value)} placeholder="19,00" />
+              <input inputMode="decimal" value={wholesale} onChange={(e) => setWholesale(formatCurrencyInput(e.target.value))} placeholder="R$ 19,00" />
             </label>
           </div>
 
@@ -194,6 +315,8 @@ export function ProductForm({
                   type="number"
                   inputMode="numeric"
                   min={0}
+                  step={1}
+                  onKeyDown={(e) => { if (["e", "E", "+", "-", ".", ","].includes(e.key)) e.preventDefault(); }}
                   value={s.quantity}
                   onChange={(e) =>
                     setStock(stock.map((x, j) => (j === i ? { ...x, quantity: Number(e.target.value) || 0 } : x)))

@@ -9,6 +9,7 @@ export const DEFAULT_SETTINGS: StoreSettings = {
   wholesaleEnabled: true,
   wholesaleMinTraditional: 20,
   wholesaleMinUv: 30,
+  whatsappOrderTemplate: "Olá! Gostaria de confirmar meu pedido #{{code}} no catálogo DZAMP:\n\n{{items}}\n\n{{subtotal_line}}\n{{discount_line}}\nTotal do Pedido: {{total}}",
 };
 
 export const SETTING_KEYS = {
@@ -20,6 +21,7 @@ export const SETTING_KEYS = {
   wholesaleEnabled: "wholesale_enabled",
   wholesaleMinTraditional: "wholesale_min_traditional",
   wholesaleMinUv: "wholesale_min_uv",
+  whatsappOrderTemplate: "whatsapp_order_template",
 } as const satisfies Record<keyof StoreSettings, string>;
 
 export const CAROUSEL_SETTING_KEY = "homepage_carousel_images";
@@ -47,6 +49,7 @@ export function parseSettings(rows: { key: string; value: string }[]): StoreSett
     wholesaleEnabled: bool(SETTING_KEYS.wholesaleEnabled, d.wholesaleEnabled),
     wholesaleMinTraditional: num(SETTING_KEYS.wholesaleMinTraditional, d.wholesaleMinTraditional),
     wholesaleMinUv: num(SETTING_KEYS.wholesaleMinUv, d.wholesaleMinUv),
+    whatsappOrderTemplate: map.get(SETTING_KEYS.whatsappOrderTemplate) || d.whatsappOrderTemplate,
   };
 }
 

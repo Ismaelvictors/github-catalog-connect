@@ -59,7 +59,7 @@ export function CartDrawer() {
         subtotal: Number(res.subtotal),
         discount: Number(res.discount),
         total: Number(res.total),
-      });
+      }, settings.whatsappOrderTemplate);
       setCompleted({ code: res.code, url, total: Number(res.total), count: res.items.reduce((sum, item) => sum + item.qty, 0) });
       clear();
       setOpen(true);

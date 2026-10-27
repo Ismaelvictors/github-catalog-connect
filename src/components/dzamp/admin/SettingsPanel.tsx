@@ -23,7 +23,7 @@ export function SettingsPanel({ onSaved }: { onSaved: () => void }) {
     if (!(s.minOrderValue >= 0) || !(s.wholesaleMinTraditional >= 1) || !(s.wholesaleMinUv >= 1))
       return setMsg({ type: "error", text: "Verifique os valores informados." });
     setBusy(true);
-    const configKeys: (keyof StoreSettings)[] = ["minOrderEnabled", "minOrderValue", "wholesaleEnabled", "wholesaleMinTraditional", "wholesaleMinUv"];
+    const configKeys: (keyof StoreSettings)[] = ["minOrderEnabled", "minOrderValue", "wholesaleEnabled", "wholesaleMinTraditional", "wholesaleMinUv", "whatsappOrderTemplate"];
     const rows = configKeys.map((k) => ({
       key: SETTING_KEYS[k],
       value: String(s[k]),
@@ -91,6 +91,14 @@ export function SettingsPanel({ onSaved }: { onSaved: () => void }) {
         </label>
       </div>
 
+      <div className="admin-card">
+        <h3>Mensagem do pedido no WhatsApp</h3>
+        <p className="muted">Edite o texto enviado ao abrir o WhatsApp. Variáveis disponíveis: {"{{code}}"}, {"{{items}}"}, {"{{subtotal}}"}, {"{{discount}}"}, {"{{total}}"}, {"{{subtotal_line}}"} e {"{{discount_line}}"}.</p>
+        <label>
+          Modelo da mensagem
+          <textarea rows={9} value={s.whatsappOrderTemplate} onChange={(e) => set("whatsappOrderTemplate", e.target.value)} />
+        </label>
+      </div>
       {msg && <p className={msg.type === "error" ? "field-error" : "admin-ok"}>{msg.text}</p>}
       <button className="btn btn-primary" onClick={save} disabled={busy}>
         {busy ? "Salvando..." : "Salvar configurações"}

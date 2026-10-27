@@ -27,6 +27,7 @@ export interface StoreSettings {
   wholesaleEnabled: boolean;
   wholesaleMinTraditional: number;
   wholesaleMinUv: number;
+  whatsappOrderTemplate: string;
 }
 
 export interface CartItem {

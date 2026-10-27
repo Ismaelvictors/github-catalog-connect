@@ -47,6 +47,12 @@ export const Route = createFileRoute("/contatos")({
 function ContactsPage() {
   const { data: contacts = DEFAULT_SETTINGS } = useQuery(contactsQueryOptions);
   const phoneDigits = contacts.whatsappNumber.replace(/\D/g, "");
+  const nationalPhone = phoneDigits.startsWith("55") ? phoneDigits.slice(2) : phoneDigits;
+  const formattedPhone = nationalPhone.length === 11
+    ? `(${nationalPhone.slice(0, 2)}) ${nationalPhone.slice(2, 7)}-${nationalPhone.slice(7)}`
+    : nationalPhone.length === 10
+      ? `(${nationalPhone.slice(0, 2)}) ${nationalPhone.slice(2, 6)}-${nationalPhone.slice(6)}`
+      : contacts.whatsappNumber;
   const whatsappUrl = `https://wa.me/${phoneDigits}`;
   const instagramHandle = contacts.instagramHandle.replace(/^@/, "");
   const instagramLabel = `@${instagramHandle}`;
@@ -62,9 +68,9 @@ function ContactsPage() {
           <div className="contact-card">
             <h3>Atendimento</h3>
             <div className="contact-icon-links" aria-label="Canais de contato">
-              <a className="contact-method" href={whatsappUrl} target="_blank" rel="noopener noreferrer" aria-label={`Fale com a DZAMP pelo WhatsApp: ${contacts.whatsappNumber}`}>
+              <a className="contact-method" href={whatsappUrl} target="_blank" rel="noopener noreferrer" aria-label={`Fale com a DZAMP pelo WhatsApp: ${formattedPhone}`}>
                 <MessageCircle size={24} aria-hidden="true" />
-                <span><strong>WhatsApp</strong><small>{contacts.whatsappNumber}</small></span>
+                <span><strong>WhatsApp</strong><small>{formattedPhone}</small></span>
               </a>
               <a className="contact-method" href={`https://www.instagram.com/${encodeURIComponent(instagramHandle)}/`} target="_blank" rel="noopener noreferrer" aria-label={`Instagram da DZAMP: ${instagramLabel}`}>
                 <Instagram size={24} aria-hidden="true" />

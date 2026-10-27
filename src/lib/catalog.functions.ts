@@ -4,7 +4,13 @@ import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import type { Database } from "@/integrations/supabase/types";
 import type { Category, Product } from "@/lib/dzamp/types";
-import { CAROUSEL_SETTING_KEY, DEFAULT_CAROUSEL_IMAGES, IMAGE_BUCKET, parseSettings, STORAGE_PREFIX } from "@/lib/dzamp/settings";
+import {
+  CAROUSEL_SETTING_KEY,
+  DEFAULT_CAROUSEL_IMAGES,
+  IMAGE_BUCKET,
+  parseSettings,
+  STORAGE_PREFIX,
+} from "@/lib/dzamp/settings";
 import { externalDbPublishableKey, externalDbUrl } from "@/lib/external-db-config";
 import { externalDbFetch } from "@/lib/external-db-client";
 
@@ -25,11 +31,16 @@ export const getCatalog = createServerFn({ method: "GET" }).handler(async () => 
   const [productsRes, stockRes, settingsRes] = await Promise.all([
     supabase
       .from("products")
-      .select("id,title,description,price,wholesale_price,category,images,sort_order,created_at,is_featured,featured_order")
+      .select(
+        "id,title,description,price,wholesale_price,category,images,sort_order,created_at,is_featured,featured_order",
+      )
       .eq("is_active", true)
       .order("sort_order", { ascending: true })
       .order("created_at", { ascending: false }),
-    supabase.from("product_stock").select("product_id,size,quantity,sort_order").order("sort_order"),
+    supabase
+      .from("product_stock")
+      .select("product_id,size,quantity,sort_order")
+      .order("sort_order"),
     supabase.from("settings").select("key,value"),
   ]);
 
@@ -80,14 +91,25 @@ export const getCatalog = createServerFn({ method: "GET" }).handler(async () => 
     try {
       const parsed: unknown = JSON.parse(carouselRaw);
       if (Array.isArray(parsed) && parsed.length) carouselImages = parsed.map(String);
-    } catch { /* Keep the bundled slides when the setting is malformed. */ }
+    } catch {
+      /* Keep the bundled slides when the setting is malformed. */
+    }
   }
-  const carouselPaths = carouselImages.filter((img) => img.startsWith(STORAGE_PREFIX)).map((img) => img.slice(STORAGE_PREFIX.length));
+  const carouselPaths = carouselImages
+    .filter((img) => img.startsWith(STORAGE_PREFIX))
+    .map((img) => img.slice(STORAGE_PREFIX.length));
   if (carouselPaths.length) {
-    const { data } = await supabase.storage.from(IMAGE_BUCKET).createSignedUrls(carouselPaths, 60 * 60 * 24 * 7);
-    for (const item of data ?? []) if (item.path && item.signedUrl) signed.set(item.path, item.signedUrl);
+    const { data } = await supabase.storage
+      .from(IMAGE_BUCKET)
+      .createSignedUrls(carouselPaths, 60 * 60 * 24 * 7);
+    for (const item of data ?? [])
+      if (item.path && item.signedUrl) signed.set(item.path, item.signedUrl);
   }
-  carouselImages = carouselImages.map((img) => img.startsWith(STORAGE_PREFIX) ? (signed.get(img.slice(STORAGE_PREFIX.length)) ?? "") : img).filter(Boolean);
+  carouselImages = carouselImages
+    .map((img) =>
+      img.startsWith(STORAGE_PREFIX) ? (signed.get(img.slice(STORAGE_PREFIX.length)) ?? "") : img,
+    )
+    .filter(Boolean);
 
   return { products, settings: parseSettings(settingsRows), carouselImages };
 });
@@ -112,12 +134,23 @@ const orderSchema = z.object({
 });
 
 export type PlaceOrderResult =
-  | { ok: true; code: string; subtotal: number; discount: number; total: number; items: { title: string; size: string; qty: number; unit_price: number }[] }
-  | { ok: false; reason: "stock"; problems: { product_id: string; size: string; available: number }[] }
+  | {
+      ok: true;
+      code: string;
+      subtotal: number;
+      discount: number;
+      total: number;
+      items: { title: string; size: string; qty: number; unit_price: number }[];
+    }
+  | {
+      ok: false;
+      reason: "stock";
+      problems: { product_id: string; size: string; available: number }[];
+    }
   | { ok: false; reason: "minimum"; minimum: number };
 
 export const placeOrder = createServerFn({ method: "POST" })
-  .inputValidator((d) => orderSchema.parse(d))
+  .validator((d) => orderSchema.parse(d))
   .handler(async ({ data }) => {
     const supabase = publicClient();
     const { data: res, error } = await supabase.rpc("place_order", { _items: data.items });
